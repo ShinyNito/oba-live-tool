@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
+import { abilities } from '@/abilities'
 import { EVENTS, eventEmitter } from '@/utils/events'
 import { useAccounts } from './useAccounts'
 
@@ -83,9 +84,13 @@ export const useLiveControlStore = create<LiveControlStore>()(
         }
         const mergedContexts: Record<string, LiveControlContext> = {}
         for (const key in persistedState.contexts ?? {}) {
+          const persisted = persistedState.contexts[key]
           mergedContexts[key] = {
             ...defaultContext(),
-            ...persistedState.contexts[key],
+            ...persisted,
+            // 已移除的平台（小红书、淘宝、快手等）回退到默认平台
+            platform:
+              persisted?.platform in abilities ? persisted.platform : defaultContext().platform,
           }
         }
         return {

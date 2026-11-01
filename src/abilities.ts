@@ -14,18 +14,6 @@ export const listeningSources: Record<ListeningSource, { name: string; tips: str
     name: '视频号',
     tips: '视频号监听目前暂时只支持用户评论消息',
   },
-  xiaohongshu: {
-    name: '小红书',
-    tips: '小红书监听目前暂时只支持用户评论消息',
-  },
-  taobao: {
-    name: '淘宝',
-    tips: '淘宝监听目前暂时只支持用户评论消息',
-  },
-  kuaishou: {
-    name: '快手',
-    tips: '快手监听目前暂时只支持用户评论消息',
-  },
 } as const
 
 type Ability = {
@@ -46,34 +34,14 @@ export const abilities: Record<LiveControlPlatform, Ability> = {
     },
   },
   eos: {},
-  kuaishou: {
-    autoReply: {
-      source: ['kuaishou'],
-    },
-  },
   wxchannel: {
     autoReply: {
       source: ['wechat-channel'],
     },
   },
-  xiaohongshu: {
-    autoReply: {
-      source: ['xiaohongshu'],
-    },
-  },
-  pgy: {
-    autoReply: {
-      source: ['xiaohongshu'],
-    },
-  },
-  taobao: {
-    autoReply: {
-      source: ['taobao'],
-    },
-  },
   dev: {
     autoReply: {
-      source: ['compass', 'control', 'wechat-channel', 'xiaohongshu', 'taobao'],
+      source: ['compass', 'control', 'wechat-channel'],
     },
   },
 }

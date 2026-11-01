@@ -1,18 +1,11 @@
 import { Result } from '@praha/byethrow'
 import type { Page } from 'playwright'
-import type { PlatformError } from '#/errors/PlatformError'
 import type { BrowserSession } from '#/managers/BrowserSessionManager'
 import { DouyinPlatform } from '../douyin'
 import { CompassListener, ControlListener } from '../douyin/commentListener'
 // 百应和抖店共用
 import { connect, ensurePage, openUrlByElement } from '../helper'
-import type {
-  ICommentListener,
-  IPerformComment,
-  IPerformPopup,
-  IPlatform,
-  ISendRedPacket,
-} from '../IPlatform'
+import type { ICommentListener, IPerformComment, IPerformPopup, IPlatform } from '../IPlatform'
 import { REGEXPS, SELECTORS, URLS } from './constant'
 
 const PLATFORM_NAME = '巨量百应' as const
@@ -20,10 +13,7 @@ const PLATFORM_NAME = '巨量百应' as const
 /**
  * 巨量百应
  */
-export class BuyinPlatform
-  implements IPlatform, IPerformPopup, IPerformComment, ICommentListener, ISendRedPacket
-{
-  readonly _isSendRedPacket = true
+export class BuyinPlatform implements IPlatform, IPerformPopup, IPerformComment, ICommentListener {
   readonly _isPerformComment = true
   readonly _isPerformPopup = true
   readonly _isCommentListener = true
@@ -77,16 +67,6 @@ export class BuyinPlatform
 
   async performPopup(...args: Parameters<IPerformPopup['performPopup']>) {
     return await DouyinPlatform.prototype.performPopup.call(this, ...args)
-  }
-
-  sendRedPacket(
-    ...args: Parameters<ISendRedPacket['sendRedPacket']>
-  ): Result.ResultAsync<void, PlatformError> {
-    return DouyinPlatform.prototype.sendRedPacket.call(this, ...args)
-  }
-
-  getRedPacketPage(): Page | null {
-    return this.mainPage
   }
 
   async performComment(message: string, pinTop: boolean) {

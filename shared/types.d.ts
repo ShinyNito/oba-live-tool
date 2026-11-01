@@ -7,19 +7,12 @@ declare interface ProviderInfo {
   name: string
   baseURL: string
   apiUrl: string
+  /** 对应 models.dev 的 provider ID */
+  modelsDev?: { id: string }
   models: string[]
 }
 
-declare type LiveControlPlatform =
-  | 'douyin'
-  | 'buyin'
-  | 'eos'
-  | 'xiaohongshu'
-  | 'pgy'
-  | 'wxchannel'
-  | 'kuaishou'
-  | 'taobao'
-  | 'dev'
+declare type LiveControlPlatform = 'douyin' | 'buyin' | 'eos' | 'wxchannel' | 'dev'
 
 declare type GoodsItem = {
   id: number
@@ -73,7 +66,7 @@ declare type SendBatchMessagesTask = {
 }
 
 declare interface CommentListenerConfig {
-  source: 'compass' | 'control' | 'wechat-channel' | 'xiaohongshu' | 'taobao' | 'kuaishou'
+  source: 'compass' | 'control' | 'wechat-channel'
   ws?: {
     port: number
   }
@@ -173,26 +166,4 @@ declare type WechatChannelLiveMessage = {
   time: number
 }
 
-declare type XiaohongshuCommentLiveMessage = {
-  msg_type: 'xiaohongshu_comment'
-  msg_id: string
-  nick_name: string
-  user_id: string
-  content: string
-  time: number
-}
-
-declare type TaobaoCommentLiveMessage = {
-  msg_type: 'taobao_comment'
-  msg_id: string
-  nick_name: string
-  user_id: string
-  content: string
-  time: number
-}
-
-declare type LiveMessage =
-  | WechatChannelLiveMessage
-  | DouyinLiveMessage
-  | XiaohongshuCommentLiveMessage
-  | TaobaoCommentLiveMessage
+declare type LiveMessage = WechatChannelLiveMessage | DouyinLiveMessage
