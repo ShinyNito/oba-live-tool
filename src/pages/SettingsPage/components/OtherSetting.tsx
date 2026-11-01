@@ -1,7 +1,5 @@
-import { ExternalLinkIcon } from 'lucide-react'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
 import { Divider, Section, SettingRow } from '@/components/common/Layout'
-import { SimpleIconsGithub } from '@/components/icons/simpleIcons'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/useToast'
 import { performFullCleanup } from '@/utils/storage'
@@ -12,20 +10,6 @@ export function OtherSetting() {
 
   const handleOpenLogFolder = async () => {
     await window.ipcRenderer.invoke(IPC_CHANNELS.app.openLogFolder)
-  }
-
-  const handleOpenGitHub = async () => {
-    await window.ipcRenderer.invoke(
-      IPC_CHANNELS.app.openExternal,
-      'https://github.com/qiutongxue/oba-live-tool',
-    )
-  }
-
-  const handleOpenIssues = async () => {
-    await window.ipcRenderer.invoke(
-      IPC_CHANNELS.app.openExternal,
-      'https://github.com/qiutongxue/oba-live-tool/issues',
-    )
   }
 
   const handleCleanupStorage = () => {
@@ -57,17 +41,6 @@ export function OtherSetting() {
       </SettingRow>
       <Divider />
       <DevSetting />
-      <Divider />
-      <SettingRow label="关于" description="开源项目，欢迎反馈问题">
-        <Button variant="ghost" size="sm" onClick={handleOpenGitHub}>
-          <SimpleIconsGithub />
-          GitHub
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleOpenIssues}>
-          反馈问题
-          <ExternalLinkIcon className="text-muted-foreground" />
-        </Button>
-      </SettingRow>
     </Section>
   )
 }
