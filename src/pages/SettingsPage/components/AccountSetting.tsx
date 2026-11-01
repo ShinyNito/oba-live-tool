@@ -1,10 +1,7 @@
 import { useMemoizedFn } from 'ahooks'
-import { BanIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useCurrentLiveControl } from '@/hooks/useLiveControl'
-import { useToast } from '@/hooks/useToast'
+import { Section, SettingRow } from '@/components/common/Layout'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,15 +11,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../../../components/ui/alert-dialog'
-import { Button } from '../../../components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../../../components/ui/card'
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { useAccounts } from '@/hooks/useAccounts'
+import { useCurrentLiveControl } from '@/hooks/useLiveControl'
+import { useToast } from '@/hooks/useToast'
 
 export function AccountSetting() {
   const { accounts, removeAccount, currentAccountId } = useAccounts()
@@ -41,58 +34,49 @@ export function AccountSetting() {
     toast.success('删除账号成功')
   })
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>删除账号</CardTitle>
-        <CardDescription>删除本地的账号配置，不会影响到抖店和百应</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">当前账号：</span>
-            <span className="font-medium">{currentAccount?.name}</span>
-          </div>
-          {currentAccountId !== 'default' ? (
-            isConnected === 'disconnected' ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                className="gap-2"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <TrashIcon className="h-4 w-4" />
-                <span>删除账号</span>
-              </Button>
-            ) : (
-              <Button variant="destructive" size="sm" className="gap-2" disabled>
-                <TrashIcon className="h-4 w-4" />
-                <span>请先断开中控台连接</span>
-              </Button>
-            )
-          ) : (
-            <Button disabled size="sm" className="gap-2">
-              <BanIcon className="h-4 w-4" />
-              <span>无法删除默认账号</span>
-            </Button>
-          )}
-        </div>
+  const isDefault = currentAccountId === 'default'
+  const blockedReason = isDefault
+    ? '默认账号不能删除'
+    : isConnected !== 'disconnected'
+      ? '请先断开中控台连接'
+      : null
 
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认删除该账号配置</AlertDialogTitle>
-              <AlertDialogDescription>
-                请确保该账号的所有任务都已停止，以免造成未知的错误
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteAccount}>确认</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+  return (
+    <Section title="账号">
+      <SettingRow
+        label={`删除「${currentAccount?.name ?? ''}」`}
+        description={blockedReason ?? '只删除本工具里的账号配置，不影响直播平台上的账号'}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          className="hover:border-destructive/30 hover:text-destructive"
+          disabled={!!blockedReason}
+          onClick={() => setIsDeleteDialogOpen(true)}
+        >
+          删除账号
+        </Button>
+      </SettingRow>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除账号「{currentAccount?.name}」？</AlertDialogTitle>
+            <AlertDialogDescription>
+              该账号的所有配置都会被删除。请先确认该账号的任务都已停止。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Section>
   )
 }

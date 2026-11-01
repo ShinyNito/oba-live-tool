@@ -1,8 +1,7 @@
 import { useMemoizedFn } from 'ahooks'
-import { ArrowBigRightDash, Edit2Icon, Save, Trash2Icon, X } from 'lucide-react'
+import { ArrowRightIcon, PencilIcon, PlusIcon, Trash2Icon, X } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Toggle } from '@/components/ui/toggle'
@@ -161,59 +160,48 @@ const ShortcutListItem: React.FC<ShortcutListItemProps> = ({
   // 渲染查看模式
   if (!isEditing) {
     return (
-      <div className="border rounded-md p-3 shadow-sm hover:shadow transition-shadow">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="flex gap-2 items-center">
-              {shortcut.ctrl && <Badge variant={'outline'}>{keyMap.ctrl}</Badge>}
-              {shortcut.shift && (
-                <Badge variant={'outline'}>
-                  {/* <ArrowBigUpIcon className="w-4 h-4" /> */}
-                  {keyMap.shift}
-                </Badge>
-              )}
-              {shortcut.alt && (
-                <Badge variant={'outline'}>
-                  {/* <OptionIcon className="w-4 h-4" /> */}
-                  {keyMap.alt}
-                </Badge>
-              )}
-              <Badge variant={'outline'}>{shortcut.key}</Badge>
-            </div>
-            <span className="text-muted-foreground">
-              <ArrowBigRightDash />
-            </span>
-            <div className="flex flex-wrap gap-1.5 max-w-xs">
-              {shortcut.goodsIds.map((id, index) => (
-                <span
-                  key={`display-${
-                    // biome-ignore lint/suspicious/noArrayIndexKey: 使用下标不影响
-                    index
-                  }`}
-                  className="bg-muted px-2 py-0.5 rounded text-sm"
-                >
-                  {id}
-                </span>
-              ))}
-              {shortcut.goodsIds.length === 0 && (
-                <span className="text-sm text-muted-foreground italic">未设置商品</span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={startEditing} title="编辑此快捷键映射">
-              <Edit2Icon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={deleteShortcut}
-              className="text-destructive"
-              title="删除此快捷键映射"
+      <div className="group flex items-center gap-4 px-3 py-2.5">
+        <KeyCombo
+          keys={[
+            shortcut.ctrl && keyMap.ctrl,
+            shortcut.shift && keyMap.shift,
+            shortcut.alt && keyMap.alt,
+            shortcut.key,
+          ]}
+        />
+        <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground" />
+        <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          {shortcut.goodsIds.map((id, index) => (
+            <GoodsChip
+              // oxlint-disable-next-line react/no-array-index-key -- 使用下标不影响
+              key={`display-${index}`}
             >
-              <Trash2Icon className="h-4 w-4" />
-            </Button>
-          </div>
+              {id}
+            </GoodsChip>
+          ))}
+          {shortcut.goodsIds.length === 0 && (
+            <span className="text-[13px] text-muted-foreground">未设置商品</span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={startEditing}
+            aria-label="编辑快捷键"
+          >
+            <PencilIcon />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 hover:text-destructive"
+            onClick={deleteShortcut}
+            aria-label="删除快捷键"
+          >
+            <Trash2Icon />
+          </Button>
         </div>
       </div>
     )
@@ -221,101 +209,112 @@ const ShortcutListItem: React.FC<ShortcutListItemProps> = ({
 
   // 渲染编辑模式
   return (
-    <div className="border rounded-md p-4 space-y-4 shadow-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="flex gap-2 justify-center items-center">
-            <Toggle variant={'outline'} pressed={ctrlKey} onPressedChange={e => setCtrlKey(e)}>
-              <span>{keyMap.ctrl}</span>
-            </Toggle>
-            <Toggle variant={'outline'} pressed={shiftKey} onPressedChange={e => setShiftKey(e)}>
-              <span>{keyMap.shift}</span>
-            </Toggle>
-            <Toggle variant={'outline'} pressed={altKey} onPressedChange={e => setAltKey(e)}>
-              <span>{keyMap.alt}</span>
-            </Toggle>
-
-            {isRecordingKey ? (
-              <div className="flex items-center space-x-2">
-                <Input
-                  className="w-24 bg-primary/5 border-primary/20"
-                  placeholder="按下键盘..."
-                  value={newKey}
-                  onKeyDown={handleKeyDown}
-                  readOnly
-                  autoFocus
-                />
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <span className="inline-block px-3 py-1.5 bg-primary/10 text-primary rounded-md font-medium">
-                  {newKey || '未设置'}
-                </span>
-                <Button variant="outline" size="sm" onClick={startRecordingKey}>
-                  修改按键
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="text-sm font-medium">商品列表</div>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {newGoodsIds.map(goodsId => (
-            <div
-              key={`edit-${goodsId}`}
-              className="flex items-center space-x-1 bg-muted rounded-md px-2 py-1 group"
+    <div className="space-y-4 bg-muted/40 p-4">
+      <div className="space-y-2">
+        <p className="text-[13px] font-medium">按键</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Toggle variant="outline" size="sm" pressed={ctrlKey} onPressedChange={setCtrlKey}>
+            {keyMap.ctrl}
+          </Toggle>
+          <Toggle variant="outline" size="sm" pressed={shiftKey} onPressedChange={setShiftKey}>
+            {keyMap.shift}
+          </Toggle>
+          <Toggle variant="outline" size="sm" pressed={altKey} onPressedChange={setAltKey}>
+            {keyMap.alt}
+          </Toggle>
+          <span className="text-muted-foreground">+</span>
+          {isRecordingKey ? (
+            <Input
+              className="h-8 w-28 border-primary/40"
+              placeholder="请按下按键…"
+              value={newKey}
+              onKeyDown={handleKeyDown}
+              onBlur={() => setIsRecordingKey(false)}
+              readOnly
+              autoFocus
+            />
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-w-28 font-mono"
+              onClick={startRecordingKey}
             >
-              <span className="text-sm">{goodsId}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 opacity-60 group-hover:opacity-100"
-                onClick={() => removeGoodsId(goodsId)}
-              >
-                <Trash2Icon className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
-          {newGoodsIds.length === 0 && (
-            <span className="text-sm text-muted-foreground italic py-1">请添加商品序号</span>
+              {newKey || <span className="font-sans text-muted-foreground">点击录制按键</span>}
+            </Button>
           )}
         </div>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Input
-              type="number"
-              placeholder="输入商品序号"
-              className="w-32"
-              min="1"
-              value={newGoodsIdInput}
-              onChange={e => setNewGoodsIdInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addGoodsId()
-                }
-              }}
-            />
-            <Button type="button" variant="outline" size="sm" onClick={addGoodsId}>
-              添加
-            </Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={cancelEditing} className="gap-1.5">
-              <X className="h-4 w-4" />
-              取消
-            </Button>
-            <Button variant="outline" size="sm" onClick={saveEditing} className="gap-1.5">
-              <Save className="h-4 w-4" />
-              保存
-            </Button>
-          </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[13px] font-medium">切换到的商品</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {newGoodsIds.map(goodsId => (
+            <GoodsChip key={`edit-${goodsId}`}>
+              {goodsId}
+              <button
+                type="button"
+                className="-mr-1 rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-destructive"
+                onClick={() => removeGoodsId(goodsId)}
+                aria-label={`移除商品 ${goodsId}`}
+              >
+                <X className="size-3" />
+              </button>
+            </GoodsChip>
+          ))}
+          <Input
+            type="number"
+            placeholder="商品序号"
+            className="h-7 w-24 text-[13px]"
+            min="1"
+            value={newGoodsIdInput}
+            onChange={e => setNewGoodsIdInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                addGoodsId()
+              }
+            }}
+          />
+          <Button type="button" variant="ghost" size="sm" className="h-7" onClick={addGoodsId}>
+            <PlusIcon />
+            添加
+          </Button>
         </div>
       </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={cancelEditing}>
+          取消
+        </Button>
+        <Button size="sm" onClick={saveEditing}>
+          保存
+        </Button>
+      </div>
     </div>
+  )
+}
+
+function KeyCombo({ keys }: { keys: (string | false | undefined)[] }) {
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      {keys.filter(Boolean).map(k => (
+        <kbd
+          key={k as string}
+          className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-b-2 bg-card px-1.5 font-mono text-xs text-foreground"
+        >
+          {k}
+        </kbd>
+      ))}
+    </div>
+  )
+}
+
+function GoodsChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex h-7 items-center gap-1 rounded-md bg-muted px-2 font-mono text-xs tabular-nums">
+      {children}
+    </span>
   )
 }
 

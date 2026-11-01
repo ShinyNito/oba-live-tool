@@ -32,13 +32,13 @@ export default function AutoPopUp() {
   useShortcutListener()
 
   return (
-    <div className="container py-8 space-y-4">
+    <div className="mx-auto w-full max-w-4xl space-y-5">
       <div className="flex items-center justify-between">
-        <Title title="自动弹窗" description="配置自动弹出商品的规则" />
+        <Title title="自动弹窗" description="按设定的间隔，在直播间轮流弹出讲解商品" />
         <TaskButton isTaskRunning={isRunning} onStartStop={handleTaskButtonClick} />
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-5">
         <GoodsListCard />
         <PopUpSettingsCard />
       </div>

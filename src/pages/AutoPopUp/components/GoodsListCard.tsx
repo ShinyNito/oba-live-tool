@@ -1,13 +1,14 @@
 import { useMemoizedFn } from 'ahooks'
 import { PlusIcon } from 'lucide-react'
 import React from 'react'
+import { Hint } from '@/components/common/Layout'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAutoPopUpActions, useCurrentAutoPopUp } from '@/hooks/useAutoPopUp'
 import { useToast } from '@/hooks/useToast'
-import GoodsListItem from './GoodsListItem'
+import { cn } from '@/lib/utils'
+import GoodsListItem, { GOODS_GRID } from './GoodsListItem'
 import ShortcutConfigTab from './ShortcutConfigTab'
 
 const CommonList = () => {
@@ -44,9 +45,7 @@ const CommonList = () => {
 
   const handleRepeatCountChange = useMemoizedFn((index: number, value: number) => {
     const count = Math.max(1, Math.min(Math.floor(value), 10000))
-    const newItems = items.map((item, i) =>
-      i === index ? { ...item, repeatCount: count } : item,
-    )
+    const newItems = items.map((item, i) => (i === index ? { ...item, repeatCount: count } : item))
     syncUpdate(newItems)
   })
 
@@ -58,9 +57,7 @@ const CommonList = () => {
         ? {
             ...item,
             itemInterval:
-              minMs === 0 && maxMs === 0
-                ? undefined
-                : ([minMs, maxMs] as [number, number]),
+              minMs === 0 && maxMs === 0 ? undefined : ([minMs, maxMs] as [number, number]),
           }
         : item,
     )
@@ -74,37 +71,45 @@ const CommonList = () => {
   })
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <Label>商品列表</Label>
-          <p className="text-sm text-muted-foreground">
-            序号 x 循环次数 | 单品弹窗间隔（0 = 用全局间隔）
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={addGoodsId}>
-          <PlusIcon className="mr-2 h-4 w-4" />
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <Hint>按顺序循环弹出商品。单品间隔填 0 表示使用下方的全局弹窗间隔</Hint>
+        <Button variant="outline" size="sm" onClick={addGoodsId} className="shrink-0">
+          <PlusIcon />
           添加商品
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {items.map((item, index) => (
-          <GoodsListItem
-            // biome-ignore lint/suspicious/noArrayIndexKey: 下标不影响
-            key={index}
-            item={item}
-            index={index}
-            onChangeId={handleGoodsIdChange}
-            onChangeRepeatCount={handleRepeatCountChange}
-            onChangeItemInterval={handleItemIntervalChange}
-            onDelete={() => {
-              syncUpdate(items.filter((_, i) => i !== index))
-            }}
-          />
-        ))}
+      <div className="overflow-hidden rounded-lg border">
+        <div className={cn(GOODS_GRID, 'h-8 bg-muted/60 text-xs text-muted-foreground')}>
+          <span>商品序号</span>
+          <span>循环次数</span>
+          <span>单品间隔</span>
+          <span />
+        </div>
+        <div className="divide-y">
+          {items.length === 0 && (
+            <p className="px-3 py-6 text-center text-[13px] text-muted-foreground">
+              还没有商品，点击"添加商品"开始配置
+            </p>
+          )}
+          {items.map((item, index) => (
+            <GoodsListItem
+              // oxlint-disable-next-line react/no-array-index-key -- 下标不影响
+              key={index}
+              item={item}
+              index={index}
+              onChangeId={handleGoodsIdChange}
+              onChangeRepeatCount={handleRepeatCountChange}
+              onChangeItemInterval={handleItemIntervalChange}
+              onDelete={() => {
+                syncUpdate(items.filter((_, i) => i !== index))
+              }}
+            />
+          ))}
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -112,22 +117,26 @@ const CommonList = () => {
 const GoodsListCard = React.memo(() => {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <Tabs defaultValue="goods-list" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="goods-list">商品列表</TabsTrigger>
-            <TabsTrigger value="shortcuts">快捷键配置</TabsTrigger>
+      <Tabs defaultValue="goods-list">
+        <CardHeader className="pb-4">
+          <TabsList>
+            <TabsTrigger value="goods-list" className="px-4">
+              商品列表
+            </TabsTrigger>
+            <TabsTrigger value="shortcuts" className="px-4">
+              快捷键
+            </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="goods-list" className="space-y-6 mt-4">
+        </CardHeader>
+        <CardContent>
+          <TabsContent value="goods-list" className="mt-0">
             <CommonList />
           </TabsContent>
-
-          <TabsContent value="shortcuts" className="mt-4">
+          <TabsContent value="shortcuts" className="mt-0">
             <ShortcutConfigTab />
           </TabsContent>
-        </Tabs>
-      </CardContent>
+        </CardContent>
+      </Tabs>
     </Card>
   )
 })

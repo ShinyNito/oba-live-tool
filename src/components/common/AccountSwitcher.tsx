@@ -90,24 +90,16 @@ export const AccountSwitcher = React.memo(() => {
   // })
 
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        onClick={e => {
-          e.stopPropagation()
-          openEditDialog(accounts.find(acc => acc.id === currentAccountId) as Account)
-        }}
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
+    <div className="flex items-center gap-0.5">
       <Select
         disabled={isConnected === 'connecting'}
         value={currentAccountId}
         onValueChange={handleAccountSwitch}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger
+          size="sm"
+          className="min-w-0 flex-1 border-transparent bg-transparent px-2.5 font-medium hover:bg-sidebar-accent"
+        >
           <SelectValue placeholder="选择账号" />
         </SelectTrigger>
         <SelectContent>
@@ -123,8 +115,28 @@ export const AccountSwitcher = React.memo(() => {
         </SelectContent>
       </Select>
 
-      <Button variant="outline" size="icon" onClick={() => setIsAddDialogOpen(true)}>
-        <Plus className="h-4 w-4" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 shrink-0 text-muted-foreground"
+        aria-label="修改账号名称"
+        title="修改账号名称"
+        onClick={e => {
+          e.stopPropagation()
+          openEditDialog(accounts.find(acc => acc.id === currentAccountId) as Account)
+        }}
+      >
+        <Pencil />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 shrink-0 text-muted-foreground"
+        aria-label="添加账号"
+        title="添加账号"
+        onClick={() => setIsAddDialogOpen(true)}
+      >
+        <Plus />
       </Button>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

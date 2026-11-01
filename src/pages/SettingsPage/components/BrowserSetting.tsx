@@ -1,9 +1,7 @@
-import { EraserIcon, FolderSearchIcon, SearchIcon } from 'lucide-react'
+import { FolderOpenIcon, ScanSearchIcon } from 'lucide-react'
 import { useId, useState } from 'react'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
-import { SimpleIconsGooglechrome, SimpleIconsMicrosoftedge } from '@/components/icons/simpleIcons'
-import { useCurrentChromeConfig, useCurrentChromeConfigActions } from '@/hooks/useChromeConfig'
-import { useToast } from '@/hooks/useToast'
+import { Divider, Field, Section, SettingRow, Token } from '@/components/common/Layout'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,19 +12,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../../../components/ui/alert-dialog'
-import { Button } from '../../../components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../../../components/ui/card'
-import { Input } from '../../../components/ui/input'
-import { Label } from '../../../components/ui/label'
-import { Separator } from '../../../components/ui/separator'
-import { Switch } from '../../../components/ui/switch'
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { useCurrentChromeConfig, useCurrentChromeConfigActions } from '@/hooks/useChromeConfig'
+import { useToast } from '@/hooks/useToast'
 
 export function BrowserSetting() {
   const path = useCurrentChromeConfig(context => context.path)
@@ -74,106 +65,70 @@ export function BrowserSetting() {
   const edgeFirstId = useId()
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>浏览器设置</CardTitle>
-        <CardDescription>配置浏览器路径</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* 自动检测 */}
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex flex-col space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium leading-none">自动检测浏览器</h4>
-                <p className="text-sm text-muted-foreground">
-                  打开浏览器后点击检测，自动获取安装路径
-                </p>
-              </div>
-              <Button
-                variant="default"
-                onClick={handleAutoDetect}
-                disabled={isDetecting}
-                className="shrink-0"
-              >
-                <SearchIcon className={`mr-2 h-4 w-4 ${isDetecting ? 'animate-spin' : ''}`} />
-                {isDetecting ? '检测中...' : '开始检测'}
-              </Button>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch id={edgeFirstId} checked={edgeFirst} onCheckedChange={setEdgeFirst} />
-              <Label htmlFor={edgeFirstId} className="text-sm text-muted-foreground">
-                优先使用 Edge 浏览器
-              </Label>
-            </div>
-          </div>
+    <Section title="浏览器" description="连接中控台时使用的 Chrome 或 Edge">
+      <Field
+        label="浏览器路径"
+        hint={
+          <>
+            选择 <Token>chrome.exe</Token> 或 <Token>msedge.exe</Token>
+            。也可以先打开浏览器，再点"自动检测"
+          </>
+        }
+      >
+        <div className="flex gap-2">
+          <Input
+            value={path}
+            onChange={e => setPath(e.target.value)}
+            placeholder="未设置"
+            className="font-mono text-[13px]"
+          />
+          <Button variant="outline" onClick={handleSelectChrome}>
+            <FolderOpenIcon />
+            浏览
+          </Button>
+          <Button variant="outline" onClick={handleAutoDetect} disabled={isDetecting}>
+            <ScanSearchIcon />
+            {isDetecting ? '检测中…' : '自动检测'}
+          </Button>
         </div>
-
-        {/* 手动配置 */}
-        <div className="space-y-1">
-          <Label>浏览器路径</Label>
-          <div className="flex gap-2">
-            <Input
-              value={path}
-              onChange={e => setPath(e.target.value)}
-              placeholder="请选择或输入浏览器路径"
-              className="font-mono"
-            />
-            <Button variant="outline" onClick={handleSelectChrome}>
-              <FolderSearchIcon className="mr-2 h-4 w-4" />
-              浏览
+      </Field>
+      <SettingRow label="自动检测时优先 Edge" htmlFor={edgeFirstId}>
+        <Switch id={edgeFirstId} checked={edgeFirst} onCheckedChange={setEdgeFirst} />
+      </SettingRow>
+      <Divider />
+      <SettingRow
+        label="重置登录状态"
+        description="清除当前账号保存的登录信息，下次连接需要重新登录"
+      >
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hover:border-destructive/30 hover:text-destructive"
+            >
+              重置
             </Button>
-          </div>
-          <p className="text-sm text-muted-foreground pt-1">
-            请选择
-            <span className="ml-1">
-              <SimpleIconsGooglechrome className="w-4 h-4 inline mx-1" />
-              chrome.exe
-            </span>
-            <span className="before:content-['|'] before:mx-1">
-              <SimpleIconsMicrosoftedge className="w-4 h-4 inline mx-1" />
-              msedge.exe
-            </span>
-          </p>
-        </div>
-
-        <Separator />
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h4 className="text-sm font-medium leading-none">重置登录状态</h4>
-            <p className="text-sm text-muted-foreground">
-              清除已保存的登录信息，下次启动时需要重新登录
-            </p>
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">
-                <EraserIcon className="mr-2 h-4 w-4" />
-                重置
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>确认重置登录状态？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  此操作将清除已保存的登录信息，您需要在下次启动时重新登录。此操作无法撤销。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleCookiesReset}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  确认重置
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </CardContent>
-    </Card>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>重置登录状态？</AlertDialogTitle>
+              <AlertDialogDescription>
+                将清除已保存的登录信息，下次连接中控台时需要重新登录。此操作无法撤销。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCookiesReset}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                确认重置
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SettingRow>
+    </Section>
   )
 }

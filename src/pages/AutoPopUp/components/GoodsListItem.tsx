@@ -2,6 +2,10 @@ import { TrashIcon } from 'lucide-react'
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+
+/** 商品列表的列宽，表头和每一行共用 */
+export const GOODS_GRID = 'grid grid-cols-[5.5rem_8rem_1fr_2rem] items-center gap-3 px-3'
 
 interface GoodsItemData {
   id: number
@@ -30,62 +34,57 @@ const GoodsListItem = React.memo(function GoodsListItem({
   const intervalMax = item.itemInterval ? item.itemInterval[1] / 1000 : 0
 
   return (
-    <div className="flex gap-2 items-center group">
+    <div className={cn(GOODS_GRID, 'group py-2')}>
       <Input
         type="number"
         value={item.id}
         onChange={e => onChangeId(index, e.target.value)}
-        className="w-20"
+        className="h-8 tabular-nums"
         min="1"
-        placeholder="序号"
-        title="商品序号"
+        aria-label="商品序号"
       />
-      <span className="text-xs text-muted-foreground whitespace-nowrap">x</span>
-      <Input
-        type="number"
-        value={repeatCount}
-        onChange={e => onChangeRepeatCount(index, Number(e.target.value) || 1)}
-        className="w-20"
-        min="1"
-        max="10000"
-        placeholder="次数"
-        title="循环弹窗次数"
-      />
-      <span className="text-xs text-muted-foreground whitespace-nowrap">次</span>
-      <span className="text-xs text-muted-foreground whitespace-nowrap ml-1">间隔</span>
-      <Input
-        type="number"
-        value={intervalMin}
-        onChange={e =>
-          onChangeItemInterval(index, Number(e.target.value) || 0, intervalMax)
-        }
-        className="w-20"
-        min="0"
-        max="20000"
-        placeholder="最小"
-        title="单品弹窗间隔最小值（秒），0 表示用全局间隔"
-      />
-      <span className="text-xs text-muted-foreground">~</span>
-      <Input
-        type="number"
-        value={intervalMax}
-        onChange={e =>
-          onChangeItemInterval(index, intervalMin, Number(e.target.value) || 0)
-        }
-        className="w-20"
-        min="0"
-        max="20000"
-        placeholder="最大"
-        title="单品弹窗间隔最大值（秒），0 表示用全局间隔"
-      />
-      <span className="text-xs text-muted-foreground whitespace-nowrap">秒</span>
+      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+        <Input
+          type="number"
+          value={repeatCount}
+          onChange={e => onChangeRepeatCount(index, Number(e.target.value) || 1)}
+          className="h-8 tabular-nums text-foreground"
+          min="1"
+          max="10000"
+          aria-label="循环弹窗次数"
+        />
+        <span>次</span>
+      </div>
+      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+        <Input
+          type="number"
+          value={intervalMin}
+          onChange={e => onChangeItemInterval(index, Number(e.target.value) || 0, intervalMax)}
+          className="h-8 w-20 tabular-nums text-foreground"
+          min="0"
+          max="20000"
+          aria-label="单品弹窗间隔最小值（秒）"
+        />
+        <span>至</span>
+        <Input
+          type="number"
+          value={intervalMax}
+          onChange={e => onChangeItemInterval(index, intervalMin, Number(e.target.value) || 0)}
+          className="h-8 w-20 tabular-nums text-foreground"
+          min="0"
+          max="20000"
+          aria-label="单品弹窗间隔最大值（秒）"
+        />
+        <span>秒</span>
+      </div>
       <Button
         variant="ghost"
         size="icon"
         onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 shrink-0"
+        aria-label="删除商品"
+        className="size-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100"
       >
-        <TrashIcon className="h-4 w-4" />
+        <TrashIcon />
       </Button>
     </div>
   )

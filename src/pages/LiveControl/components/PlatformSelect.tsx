@@ -8,24 +8,20 @@ import {
 } from '@/components/ui/select'
 import { useCurrentLiveControl, useCurrentLiveControlActions } from '@/hooks/useLiveControl'
 
-const basePlatforms: Record<LiveControlPlatform, string> = {
+export const platformNames: Record<LiveControlPlatform, string> = {
   douyin: '抖音小店',
   buyin: '巨量百应',
   eos: '抖音团购',
-  xiaohongshu: '小红书千帆',
-  pgy: '小红书蒲公英',
   wxchannel: '视频号',
-  kuaishou: '快手小店',
-  taobao: '淘宝',
   dev: '测试平台',
 }
 
 const platforms = (() => {
   const isDev = process.env.NODE_ENV === 'development'
   if (isDev) {
-    return basePlatforms
+    return platformNames
   }
-  const { dev: _, ...productionPlatforms } = basePlatforms
+  const { dev: _, ...productionPlatforms } = platformNames
   return productionPlatforms
 })()
 
@@ -36,7 +32,7 @@ const PlatformSelect = React.memo(() => {
 
   return (
     <Select value={platform} onValueChange={setPlatform} disabled={isConnected !== 'disconnected'}>
-      <SelectTrigger className="w-[140px]">
+      <SelectTrigger className="w-36">
         <SelectValue placeholder="选择平台" />
       </SelectTrigger>
       <SelectContent>

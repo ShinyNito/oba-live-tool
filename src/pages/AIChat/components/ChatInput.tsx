@@ -47,17 +47,18 @@ export default function ChatInput({
         value={input}
         onChange={e => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="输入消息，按 Enter 发送..."
-        className="resize-none flex-1 min-h-[56px] max-h-[200px] bg-muted/50 focus:bg-background transition-colors"
-        rows={3}
+        placeholder="输入消息，Enter 发送，Shift + Enter 换行"
+        className="max-h-[200px] min-h-[56px] flex-1 resize-none"
+        rows={2}
       />
       <Button
         size="icon"
-        className="px-8 h-auto bg-primary hover:bg-primary/90"
+        className="h-auto w-12 self-stretch"
+        aria-label="发送"
         onClick={handleSubmit}
         disabled={!input.trim() || status !== 'ready'}
       >
-        <SendIcon className="h-5 w-5" />
+        <SendIcon />
       </Button>
     </>
   )

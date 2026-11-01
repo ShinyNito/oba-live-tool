@@ -47,29 +47,6 @@ export function CarbonBlockStorage(props: SVGProps<SVGSVGElement>) {
   )
 }
 
-export function CarbonIbmEventAutomation(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>
-      <title>IBM Event Automation</title>
-      <circle cx="4" cy="22" r="2" fill="currentColor" />
-      <path
-        fill="currentColor"
-        d="M13.5 30a9.53 9.53 0 0 1-7.73-3.977l1.626-1.164A7.52 7.52 0 0 0 13.5 28c3.969 0 7.258-3.1 7.487-7.058l1.997.116C22.694 26.072 18.527 30 13.5 30"
-      />
-      <circle cx="28" cy="23" r="2" fill="currentColor" />
-      <path
-        fill="currentColor"
-        d="m30.641 19.095l-1.924-.545A7.5 7.5 0 0 0 29 16.5c0-4.135-3.364-7.5-7.5-7.5a7.4 7.4 0 0 0-3.088.663l-.824-1.822A9.4 9.4 0 0 1 21.5 7c5.238 0 9.5 4.262 9.5 9.5c0 .88-.12 1.754-.359 2.595m-10.227-4.51l-3-3C17.037 11.209 16.534 11 16 11s-1.037.208-1.414.586l-3 3c-.39.39-.586.902-.586 1.414s.196 1.024.586 1.414l3 3c.377.378.88.586 1.414.586s1.037-.208 1.414-.586l3-3c.39-.39.586-.902.586-1.414s-.196-1.024-.586-1.414M16 19l-3-3l3-3l3 3z"
-      />
-      <circle cx="16" cy="3" r="2" fill="currentColor" />
-      <path
-        fill="currentColor"
-        d="M8.025 19.882A9.49 9.49 0 0 1 3 11.5c0-5.027 3.928-9.193 8.942-9.484l.116 1.997a7.502 7.502 0 0 0-3.089 14.105z"
-      />
-    </svg>
-  )
-}
-
 export function CarbonIbmWatsonTextToSpeech(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>
@@ -142,18 +119,6 @@ export function CarbonPlayFilledAlt(props: SVGProps<SVGSVGElement>) {
       <path
         fill="currentColor"
         d="M7 28a1 1 0 0 1-1-1V5a1 1 0 0 1 1.482-.876l20 11a1 1 0 0 1 0 1.752l-20 11A1 1 0 0 1 7 28"
-      />
-    </svg>
-  )
-}
-
-export function CarbonGift(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>
-      <title>Gift</title>
-      <path
-        fill="currentColor"
-        d="M26 12h-4.46a5 5 0 0 0 .46-2a4 4 0 0 0-7-2.65A4 4 0 0 0 8 10a5 5 0 0 0 .46 2H6a2 2 0 0 0-2 2v4a1 1 0 0 0 1 1v9a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2v-9a1 1 0 0 0 1-1v-4a2 2 0 0 0-2-2m-10 2h-2v-2h2zm0-4h-1a2 2 0 0 1 0-4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1m3-4a2 2 0 0 1 0 4h-1a1 1 0 0 1-1-1V9a2 2 0 0 1 2-2M6 14v-2h9v2zm1 2h8v12H7zm18 12h-8V16h8zm1-12H17v-2h9z"
       />
     </svg>
   )

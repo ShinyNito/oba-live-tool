@@ -1,8 +1,10 @@
 import { useDebounceFn } from 'ahooks'
 import { useCurrentLiveControl } from '@/hooks/useLiveControl'
-import { CarbonPlayFilledAlt, CarbonStopFilledAlt } from '../icons/carbon'
+import { cn } from '@/lib/utils'
+import { CarbonPlayFilledAlt } from '../icons/carbon'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
+import { StatusDot } from './StatusDot'
 
 export function TaskButton({
   isTaskRunning,
@@ -25,18 +27,23 @@ export function TaskButton({
         <TooltipTrigger asChild>
           <span>
             <Button
-              variant={isTaskRunning ? 'destructive' : 'default'}
+              variant={isTaskRunning ? 'outline' : 'default'}
               onClick={() => debouncedFn.run()}
               disabled={forbidden || isConnected !== 'connected'}
+              className={cn(
+                'min-w-28',
+                isTaskRunning &&
+                  'border-live/30 bg-live-soft text-destructive hover:bg-live-soft/70 hover:text-destructive',
+              )}
             >
               {isTaskRunning ? (
                 <>
-                  <CarbonStopFilledAlt className="mr-2 h-4 w-4" />
+                  <StatusDot tone="live" pulse className="mx-1" />
                   停止任务
                 </>
               ) : (
                 <>
-                  <CarbonPlayFilledAlt className="mr-2 h-4 w-4" />
+                  <CarbonPlayFilledAlt />
                   开始任务
                 </>
               )}

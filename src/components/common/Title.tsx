@@ -1,8 +1,8 @@
 export function Title({ title, description }: { title: string; description: string }) {
   return (
-    <div>
-      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground mt-2">{description}</p>
+    <div className="min-w-0">
+      <h1 className="text-xl font-semibold tracking-[-0.012em]">{title}</h1>
+      <p className="mt-1 text-[13px] text-muted-foreground">{description}</p>
     </div>
   )
 }

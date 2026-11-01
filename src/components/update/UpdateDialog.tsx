@@ -131,9 +131,9 @@ export function UpdateDialog() {
         {status !== 'error' && (
           <>
             <div className="flex justify-end space-x-1 items-center text-sm text-muted-foreground">
-              <span className="text-gray-400">v{updateInfo?.currentVersion}</span>
+              <span className="text-muted-foreground">v{updateInfo?.currentVersion}</span>
               <span>{'→'}</span>
-              <span className="text-gray-700 font-bold">v{updateInfo?.latestVersion}</span>
+              <span className="font-semibold text-foreground">v{updateInfo?.latestVersion}</span>
             </div>
             {updateInfo?.releaseNote && (
               <ScrollArea className="max-h-64">

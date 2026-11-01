@@ -1,8 +1,9 @@
 import { useDebounceEffect, useEventListener, useMemoizedFn } from 'ahooks'
 import React, { useEffect, useRef } from 'react'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
+import AIModelInfo from '@/components/ai-chat/AIModelInfo'
 import { LoadingIcon } from '@/components/icons/loading'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { type ChatMessage, useAIChatStore } from '@/hooks/useAIChat'
 import { useAIProvider } from '@/hooks/useAIProvider'
@@ -180,16 +181,26 @@ export default function ChatBox() {
   const { scrollAreaRef } = useScrollToBottom(messages)
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-20rem)] border-none">
-      <CardContent className="flex-1 flex flex-col gap-4 p-0 overflow-hidden">
-        <ScrollArea ref={scrollAreaRef} className="flex-1 px-6 py-4">
+    <Card className="flex min-h-80 flex-1 flex-col overflow-hidden">
+      <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1 px-6 py-5">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-start gap-1 py-6">
+            <p className="text-[15px] font-medium">还没有对话</p>
+            <p className="text-[13px] text-muted-foreground">
+              可以让 AI 帮你写开场话术、整理商品卖点，或者给评论回复出主意。
+            </p>
+          </div>
+        ) : (
           <MessageList messages={messages} status={status} onRetry={sendMessage} />
-        </ScrollArea>
+        )}
+      </ScrollArea>
 
-        <div className="flex gap-2 items-stretch p-4 border-t">
+      <div className="space-y-2 border-t bg-muted/40 p-3">
+        <AIModelInfo />
+        <div className="flex items-stretch gap-2">
           <ChatInput onSubmit={sendMessage} />
         </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }
