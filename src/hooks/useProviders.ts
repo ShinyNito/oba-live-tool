@@ -26,7 +26,7 @@ export function useProviders(): Record<string, ProviderInfo> {
   useEffect(() => {
     if (loaded) return
 
-    // 从主进程获取 providers（可能是缓存或 GitHub 返回的最新数据）
+    // 从主进程获取 providers（可能是缓存或 models.dev 的最新数据）
     window.ipcRenderer.invoke(IPC_CHANNELS.app.getProviders).then(data => {
       if (data) {
         store.setState({ providers: data, loaded: true })
@@ -34,7 +34,7 @@ export function useProviders(): Record<string, ProviderInfo> {
     })
   }, [loaded])
 
-  // 监听主进程主动推送的 providers 更新（GitHub 获取完成后推送）
+  // 监听主进程主动推送的 providers 更新（models.dev 获取完成后推送）
   useEffect(() => {
     const unsubscribe = window.ipcRenderer.on(
       IPC_CHANNELS.app.providersUpdated,

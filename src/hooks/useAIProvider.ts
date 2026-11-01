@@ -122,8 +122,8 @@ export const useAIProviderStore = create<AIProviderStore>()(
 )
 
 export function useAIProvider(type: AIConfigType) {
-  const store = useAIProviderStore()
-  const props = store[type]
+  const store = useAIProviderStore.getState()
+  const props = useAIProviderStore(state => state[type])
   const actions = {
     setConfig: (config: Partial<ProviderConfig>) => {
       store.setConfig(type, config)

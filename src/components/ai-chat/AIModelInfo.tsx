@@ -1,7 +1,7 @@
 import type { AIConfigType } from '@/hooks/useAIProvider'
 import { useAIProvider } from '@/hooks/useAIProvider'
 import { useProviders } from '@/hooks/useProviders'
-import { Badge } from '../ui/badge'
+import { ProviderIcon } from '../icons/providerLogos'
 
 interface AIModelInfoProps {
   type?: AIConfigType
@@ -11,15 +11,13 @@ export default function AIModelInfo({ type = 'chat' }: AIModelInfoProps) {
   const { config: aiConfig } = useAIProvider(type)
   const providers = useProviders()
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant="dark" className="gap-1">
-        <span className="text-xs font-medium">提供商:</span>
-        <span>{providers[aiConfig.provider]?.name ?? aiConfig.provider}</span>
-      </Badge>
-      <Badge variant="outline" className="gap-1">
-        <span className="text-xs font-medium">模型:</span>
-        <span className="font-mono">{aiConfig.model}</span>
-      </Badge>
+    <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      <ProviderIcon provider={aiConfig.provider} className="size-3.5 shrink-0 text-foreground" />
+      <span className="shrink-0 font-medium text-foreground">
+        {providers[aiConfig.provider]?.name ?? aiConfig.provider}
+      </span>
+      <span aria-hidden>·</span>
+      <span className="truncate font-mono">{aiConfig.model || '未选择模型'}</span>
     </div>
   )
 }

@@ -24,75 +24,23 @@ import type { AIConfigType, AIProvider, ProviderConfig } from '@/hooks/useAIProv
 import { useAIProvider } from '@/hooks/useAIProvider'
 import { useProviders } from '@/hooks/useProviders'
 import { useToast } from '@/hooks/useToast'
-import { ScrollArea } from '../ui/scroll-area'
+import { ProviderIcon } from '../icons/providerLogos'
+import { ModelCombobox } from './ModelCombobox'
 
-const PresetModelSelector = memo(
-  ({
-    models,
-    model,
-    onChange,
-  }: {
-    models: string[]
-    model: string
-    onChange: (model: string) => void
-  }) => {
-    return (
-      <div className="space-y-2">
-        <Label>选择模型</Label>
-        <Select value={model} onValueChange={onChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="选择模型" />
-          </SelectTrigger>
-          <SelectContent>
-            <ScrollArea className="h-[200px]">
-              {models.map(m => (
-                <SelectItem key={m} value={m}>
-                  {m}
-                </SelectItem>
-              ))}
-            </ScrollArea>
-          </SelectContent>
-        </Select>
-      </div>
-    )
-  },
-)
-
-// 火山引擎的接入点，替换 model 的
-const VolcengineEndpoint = memo(
-  ({ model, onChange }: { model: string; onChange: (model: string) => void }) => {
-    return (
-      <div className="space-y-2">
-        <Label>模型或接入点 ID</Label>
-        <Input
-          value={model}
-          onChange={e => onChange(e.target.value)}
-          placeholder="请输入火山引擎的模型 ID 或接入点 ID"
-        />
-        <p className="text-xs text-muted-foreground">
-          您可以在
-          <a
-            href="https://www.volcengine.com/docs/82379/1330310"
-            rel="noreferrer"
-            target="_blank"
-            className="px-1 text-primary hover:underline"
-          >
-            模型列表
-          </a>
-          获取模型 ID，或在
-          <a
-            href="https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint"
-            rel="noreferrer"
-            target="_blank"
-            className="px-1 text-primary hover:underline"
-          >
-            火山引擎控制台
-          </a>
-          获取接入点 ID。
-        </p>
-      </div>
-    )
-  },
+// 火山引擎除了模型 ID，还可以使用控制台创建的接入点 ID
+const VolcengineHint = () => (
+  <p className="text-xs text-muted-foreground">
+    也可以直接输入在
+    <a
+      href="https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint"
+      rel="noreferrer"
+      target="_blank"
+      className="px-1 text-primary hover:underline"
+    >
+      火山引擎控制台
+    </a>
+    创建的接入点 ID。
+  </p>
 )
 
 const CustomModelInput = memo(
@@ -137,21 +85,16 @@ const ModelSelector = memo(
       )
     }
 
-    if (tempConfig.provider === 'volcengine') {
-      return (
-        <VolcengineEndpoint
-          model={tempConfig.modelPreferences.volcengine || ''}
+    return (
+      <div className="space-y-2">
+        <Label>{tempConfig.provider === 'volcengine' ? '模型或接入点 ID' : '选择模型'}</Label>
+        <ModelCombobox
+          models={models}
+          model={tempConfig.modelPreferences[tempConfig.provider] || ''}
           onChange={handleModelChange}
         />
-      )
-    }
-
-    return (
-      <PresetModelSelector
-        models={models}
-        model={tempConfig.modelPreferences[tempConfig.provider] || ''}
-        onChange={handleModelChange}
-      />
+        {tempConfig.provider === 'volcengine' && <VolcengineHint />}
+      </div>
     )
   },
 )
@@ -185,7 +128,7 @@ const ApiKeyInput = memo(
           <Label>API Key</Label>
           {provider !== 'volcengine' && (
             <div className="flex items-center gap-2">
-              {testSuccess && <CheckIcon className="h-4 w-4 text-green-500" />}
+              {testSuccess && <CheckIcon className="h-4 w-4 text-success" />}
               <Button
                 type="button"
                 variant="outline"
@@ -339,7 +282,7 @@ export function APIKeyDialog({ type = 'chat' }: APIKeyDialogProps) {
   }, [tempConfig.provider, tempKeys, tempCustomBaseURL, toast])
 
   // 当切换提供商时重置测试状态
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 需要依赖 provider 的变化（可能有更好的方法）
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- 需要依赖 provider 的变化（可能有更好的方法）
   useEffect(() => {
     setTestSuccess(false)
   }, [tempConfig.provider])
@@ -363,6 +306,7 @@ export function APIKeyDialog({ type = 'chat' }: APIKeyDialogProps) {
                 <SelectContent>
                   {Object.keys(providers).map(key => (
                     <SelectItem key={key} value={key}>
+                      <ProviderIcon provider={key} className="text-foreground" />
                       {providers[key].name}
                     </SelectItem>
                   ))}

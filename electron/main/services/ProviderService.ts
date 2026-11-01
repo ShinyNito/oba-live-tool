@@ -1,32 +1,54 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
-import { providers as defaultProviders } from 'shared/providers'
+import { providers as defaultProviders, MODELS_DEV_API_URL } from 'shared/providers'
 import { emitter } from '#/event/eventBus'
 import { createLogger } from '#/logger'
 
-/**
- * GitHub 仓库信息，用于构建各 CDN 源 URL。
- * 修改这里可切换数据源仓库。
- */
-const REPO_INFO = {
-  owner: 'qiutongxue',
-  name: 'oba-live-tool',
-  branch: 'main',
-  file: 'providers.json',
+/** 只缓存各 provider 的模型列表，名称、baseURL 等始终以内置配置为准 */
+const MODELS_CACHE_FILE = 'models.cache.json'
+/** 旧版本从 GitHub 拉取的完整 providers 缓存，已不再使用 */
+const LEGACY_CACHE_FILE = 'providers.cache.json'
+
+type ModelLists = Record<string, string[]>
+
+interface ModelsDevModel {
+  id: string
+  status?: 'alpha' | 'beta' | 'deprecated'
+  release_date?: string
+  modalities?: { output?: string[] }
 }
 
-/** 多 CDN 源，按优先级依次尝试 */
-const PROVIDER_URLS = [
-  // 1. jsDelivr CDN
-  `https://cdn.jsdelivr.net/gh/${REPO_INFO.owner}/${REPO_INFO.name}@${REPO_INFO.branch}/${REPO_INFO.file}`,
-  // 2. 极简CDN (ghproxy 镜像)
-  `https://gh-proxy.com/raw.githubusercontent.com/${REPO_INFO.owner}/${REPO_INFO.name}/${REPO_INFO.branch}/${REPO_INFO.file}`,
-  // 3. GitHub raw — 兜底
-  `https://raw.githubusercontent.com/${REPO_INFO.owner}/${REPO_INFO.name}/${REPO_INFO.branch}/${REPO_INFO.file}`,
-]
+type ModelsDevApi = Record<string, { models: Record<string, ModelsDevModel> }>
 
-const PROVIDERS_CACHE_FILE = 'providers.cache.json'
+function pickModels(api: ModelsDevApi): ModelLists {
+  const lists: ModelLists = {}
+  for (const [key, provider] of Object.entries(defaultProviders)) {
+    if (!provider.modelsDev) continue
+    const source = api[provider.modelsDev.id]?.models
+    if (!source) continue
+
+    const models = Object.values(source)
+      // 排除已弃用和不输出文本的模型（图像、语音、Embedding 等），它们无法用于对话
+      .filter(m => m.modalities?.output?.includes('text') && m.status !== 'deprecated')
+      .sort(
+        (a, b) =>
+          (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.id.localeCompare(b.id),
+      )
+      .map(m => m.id)
+
+    if (models.length > 0) lists[key] = models
+  }
+  return lists
+}
+
+function withModels(lists: ModelLists): Record<string, ProviderInfo> {
+  const result: Record<string, ProviderInfo> = {}
+  for (const [key, provider] of Object.entries(defaultProviders)) {
+    result[key] = { ...provider, models: lists[key] ?? provider.models }
+  }
+  return result
+}
 
 export class ProviderService {
   private logger = createLogger('ProviderService')
@@ -34,7 +56,7 @@ export class ProviderService {
   private _providers: Record<string, ProviderInfo> = { ...defaultProviders }
 
   constructor() {
-    this.cachePath = path.join(app.getPath('userData'), PROVIDERS_CACHE_FILE)
+    this.cachePath = path.join(app.getPath('userData'), MODELS_CACHE_FILE)
   }
 
   get providers(): Record<string, ProviderInfo> {
@@ -42,48 +64,35 @@ export class ProviderService {
   }
 
   async initialize(): Promise<void> {
-    // 1. 先加载本地缓存（同步），保证即使离线也有数据
+    // 1. 先加载本地缓存，保证离线也有数据
     await this.loadFromCache()
-    // 2. 后台异步从 CDN 获取最新数据，不阻塞窗口创建
-    this.fetchRemote().catch(() => {})
+    // 2. 后台从 models.dev 获取最新模型列表，不阻塞窗口创建
+    this.fetchRemote().catch(error => {
+      this.logger.warn(`从 models.dev 获取模型列表失败，将使用本地数据`, error)
+    })
+    fs.rm(path.join(app.getPath('userData'), LEGACY_CACHE_FILE), { force: true }).catch(() => {})
   }
 
   private async loadFromCache(): Promise<void> {
     try {
       const data = await fs.readFile(this.cachePath, 'utf-8')
-      const cached = JSON.parse(data)
-      this._providers = { ...defaultProviders, ...cached }
-      this.logger.debug('已从本地缓存加载 providers')
+      this._providers = withModels(JSON.parse(data))
+      this.logger.debug('已从本地缓存加载模型列表')
     } catch {
-      this.logger.verbose('未找到 providers 缓存，将使用内置默认配置')
+      this.logger.verbose('未找到模型列表缓存，将使用内置默认配置')
     }
   }
 
-  /** 依次尝试各 CDN 源，成功后更新缓存并推送 */
   private async fetchRemote(): Promise<void> {
-    const errors: Array<{ url: string; error: unknown }> = []
-
-    for (const url of PROVIDER_URLS) {
-      try {
-        const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status} ${response.statusText}`)
-        }
-        const data: Record<string, ProviderInfo> = await response.json()
-        this._providers = { ...defaultProviders, ...data }
-        await fs.writeFile(this.cachePath, JSON.stringify(this._providers, null, 2), 'utf-8')
-        emitter.emit('providers-updated', this._providers)
-        this.logger.success(`已从 CDN 更新 providers: ${url}`)
-        return
-      } catch (error) {
-        errors.push({ url, error })
-        this.logger.warn(`CDN 源获取失败: ${url}`, error)
-      }
+    const response = await fetch(MODELS_DEV_API_URL, { signal: AbortSignal.timeout(15_000) })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`)
     }
-
-    this.logger.error(
-      `所有 CDN 源均获取失败 (${errors.length}/${PROVIDER_URLS.length})，将使用本地数据`,
-    )
+    const lists = pickModels(await response.json())
+    this._providers = withModels(lists)
+    await fs.writeFile(this.cachePath, JSON.stringify(lists, null, 2), 'utf-8')
+    emitter.emit('providers-updated', this._providers)
+    this.logger.success('已从 models.dev 更新模型列表')
   }
 }
 
