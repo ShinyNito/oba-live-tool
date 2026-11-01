@@ -1,6 +1,8 @@
 import { Result } from '@praha/byethrow'
+import { IPC_CHANNELS } from 'shared/ipcChannels'
 import type { ScopedLogger } from '#/logger'
 import { insertRandomSpaces, randomInt, replaceVariant, sleep } from '#/utils'
+import windowManager from '#/windowManager'
 import type { IPerformComment } from './../platforms/IPlatform'
 import { createTask } from './BaseTask'
 import { TaskStopReason } from './ITask'
@@ -10,6 +12,7 @@ const TASK_NAME = '一键评论'
 export function createSendBatchMessageTask(
   platform: IPerformComment,
   config: SendBatchMessagesConfig,
+  account: Account,
   _logger: ScopedLogger,
 ) {
   const logger = _logger.scope(TASK_NAME)
@@ -32,6 +35,11 @@ export function createSendBatchMessageTask(
           return task.stop(TaskStopReason.ERROR, result.error)
         }
         logger.success(`成功发送第 ${i + 1}/${count} 条评论：${message}`)
+        windowManager.send(IPC_CHANNELS.tasks.autoMessage.messageSent, {
+          accountId: account.id,
+          content: message,
+          kind: 'batch',
+        })
         // 以防万一，加一个 1s 的小停顿
         await sleep(1000)
       }

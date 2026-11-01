@@ -108,6 +108,11 @@ export function createAutoCommentTask(
           return pinTop
         }
         logger.success(`发送${pinTop.value ? '「置顶」' : ''}消息: ${content}`)
+        windowManager.send(IPC_CHANNELS.tasks.autoMessage.messageSent, {
+          accountId: account.id,
+          content,
+          kind: 'scheduled',
+        })
         return Result.succeed()
       },
       {

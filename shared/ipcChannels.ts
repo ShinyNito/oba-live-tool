@@ -12,6 +12,8 @@ export const IPC_CHANNELS = {
       stoppedEvent: 'tasks:autoMessage:stoppedEvent',
       updateConfig: 'tasks:autoMessage:updateConfig',
       sendBatchMessages: 'tasks:autoMessage:sendBatchMessages',
+      /** 定时发言、一键刷屏每成功发出一条评论 */
+      messageSent: 'tasks:autoMessage:messageSent',
     },
     autoPopUp: {
       start: 'tasks:autoPopUp:start',
@@ -40,10 +42,6 @@ export const IPC_CHANNELS = {
     },
     // 视频号上墙
     pinComment: 'tasks:pinComment',
-    // 一键发红包
-    redPacket: {
-      send: 'tasks:redPacket:send',
-    },
   },
   config: {
     save: 'config:save',

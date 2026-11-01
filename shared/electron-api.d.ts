@@ -27,6 +27,11 @@ export interface IpcChannels {
   [IPC_CHANNELS.tasks.autoMessage.start]: (accountId: string, config: AutoCommentConfig) => boolean
   [IPC_CHANNELS.tasks.autoMessage.stop]: (accountId: string) => boolean
   [IPC_CHANNELS.tasks.autoMessage.stoppedEvent]: (id: string) => void
+  [IPC_CHANNELS.tasks.autoMessage.messageSent]: (params: {
+    accountId: string
+    content: string
+    kind: 'scheduled' | 'batch'
+  }) => void
   [IPC_CHANNELS.tasks.autoMessage.sendBatchMessages]: (
     accountId: string,
     messages: string[],
@@ -57,7 +62,11 @@ export interface IpcChannels {
     config: CommentListenerConfig,
   ) => boolean
   [IPC_CHANNELS.tasks.autoReply.stopCommentListener]: (accountId: string) => void
-  [IPC_CHANNELS.tasks.autoReply.sendReply]: (accountId: string, replyContent: string) => void
+  [IPC_CHANNELS.tasks.autoReply.sendReply]: (
+    accountId: string,
+    replyContent: string,
+    options?: { manual?: boolean },
+  ) => void
   [IPC_CHANNELS.tasks.autoReply.listenerStopped]: (accountId: string) => void
   [IPC_CHANNELS.tasks.autoReply.showComment]: (data: {
     comment: LiveMessage
@@ -96,9 +105,6 @@ export interface IpcChannels {
 
   // 视频号上墙
   [IPC_CHANNELS.tasks.pinComment]: (params: { accountId: string; content: string }) => void
-
-  // 一键发红包
-  [IPC_CHANNELS.tasks.redPacket.send]: (accountId: string, duration: string) => boolean
 
   // Updater
   [IPC_CHANNELS.updater.checkUpdate]: () => Promise<

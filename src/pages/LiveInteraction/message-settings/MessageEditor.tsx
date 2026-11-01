@@ -3,6 +3,7 @@ import { PinIcon, PinOffIcon } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 import type { Message } from '@/hooks/useAutoMessage'
+import { cn } from '@/lib/utils'
 
 const MAX_LENGTH = 50
 
@@ -76,64 +77,66 @@ export default function MessageEditor({
       .filter(item => item.length > MAX_LENGTH)
   }
 
+  const overLimitLines = getOverLimitLines()
+
   return (
-    <div>
-      <div className="border rounded flex">
-        <div className="bg-gray-100 text-right px-1 py-1 font-mono text-gray-500 select-none">
+    <div className="space-y-2">
+      <div className="flex overflow-hidden rounded-lg border bg-card focus-within:ring-2 focus-within:ring-ring/30">
+        <div className="border-r bg-muted/60 py-1 font-mono text-xs text-muted-foreground select-none">
           {localMessages.map((msg, i) => {
-            const lengthInfo = getLineLengthInfo(i)
+            const isOverLimit = getLineLengthInfo(i)?.isOverLimit
             return (
               <button
                 type="button"
-                title="置顶"
+                title={msg.pinTop ? '取消置顶' : '发送后置顶'}
+                aria-label={`第 ${i + 1} 行${msg.pinTop ? '，已置顶' : ''}`}
+                aria-pressed={msg.pinTop}
                 key={msg.id}
-                className="h-8 px-1 leading-8 cursor-pointer flex items-center justify-between group"
+                className="group flex h-8 w-full items-center gap-1.5 pr-2.5 pl-2 transition-colors hover:bg-accent"
                 onClick={() => handleCheckboxChange(i, !msg.pinTop)}
               >
                 {msg.pinTop ? (
-                  <PinIcon
-                    size={16}
-                    className="text-gray-500 group-hover:text-gray-600"
-                    fill="currentColor"
-                  />
+                  <PinIcon size={14} className="text-foreground" fill="currentColor" />
                 ) : (
-                  <PinOffIcon size={16} className="text-gray-400 group-hover:text-gray-600" />
+                  <PinOffIcon
+                    size={14}
+                    className="opacity-35 transition-opacity group-hover:opacity-100"
+                  />
                 )}
-                <span className="ml-2">{i + 1}</span>
+                <span
+                  className={cn(
+                    'ml-auto min-w-4 text-right tabular-nums',
+                    isOverLimit && 'font-medium text-destructive',
+                  )}
+                >
+                  {i + 1}
+                </span>
               </button>
             )
           })}
         </div>
-
-        <style>
-          {`.no-scrollbar::-webkit-scrollbar {
-                display: none;
-            }`}
-        </style>
 
         <textarea
           value={text}
           spellCheck={false}
           onChange={handleChange}
           rows={localMessages.length || 1}
-          className="bg-white flex-1 outline-none resize-none px-2 py-1 text-sm whitespace-pre border-l no-scrollbar"
+          placeholder="欢迎{宝宝/家人}来到直播间"
+          className="flex-1 resize-none bg-transparent px-3 py-1 text-[13px] whitespace-pre outline-none [scrollbar-width:none] placeholder:text-muted-foreground"
           style={{ lineHeight: '2rem' }}
         />
       </div>
-      {!unlimitedLength && (
-        <div className="mt-1 space-y-1">
-          <p className="text-xs text-muted-foreground">每行最多 {MAX_LENGTH} 个字符</p>
-          {getOverLimitLines().length > 0 && (
-            <p className="text-xs text-destructive">
-              第{' '}
-              {getOverLimitLines()
-                .map(item => item.index)
-                .join('、')}{' '}
-              行超出字数限制
-            </p>
-          )}
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
+        <span className="tabular-nums">
+          共 {localMessages.filter(msg => msg.content.trim()).length} 条
+          {!unlimitedLength && ` · 每行最多 ${MAX_LENGTH} 个字`}
+        </span>
+        {overLimitLines.length > 0 && (
+          <span className="text-destructive">
+            第 {overLimitLines.map(item => item.index).join('、')} 行超出字数限制
+          </span>
+        )}
+      </div>
     </div>
   )
 }

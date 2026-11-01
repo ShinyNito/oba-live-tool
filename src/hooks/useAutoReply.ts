@@ -1,8 +1,9 @@
 import { useMemoizedFn } from 'ahooks'
-import { useMemo } from 'react'
+import { type Draft, isDraft, original } from 'immer'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import { useShallow } from 'zustand/react/shallow'
 import { AUTO_REPLY } from '@/constants'
 import { EVENTS, eventEmitter } from '@/utils/events'
 import { matchObject } from '@/utils/filter'
@@ -13,12 +14,18 @@ import { type AutoReplyConfig, useAutoReplyConfig } from './useAutoReplyConfig'
 import { useErrorHandler } from './useErrorHandler'
 import { useCurrentLiveControl } from './useLiveControl'
 
-interface ReplyPreview {
+/** 来源：关键词规则、互动事件、AI 生成，以及主动发出的定时发言、一键刷屏 */
+export type ReplySource = 'keyword' | 'event' | 'ai' | 'scheduled' | 'batch'
+
+export interface ReplyPreview {
   id: string
   commentId: string
   replyContent: string
   replyFor: string
   time: string
+  source: ReplySource
+  /** 是否已发送到直播间（AI 关闭自动发送时为 false） */
+  sent: boolean
 }
 
 export type Message = LiveMessage
@@ -37,12 +44,25 @@ type CommentMessage = MessageOf<Exclude<MessageType, EventMessageType>>
 
 type ListeningStatus = 'waiting' | 'listening' | 'stopped' | 'error'
 
+/** 本场统计。列表有条数上限，统计单独累计 */
+export interface AutoReplyStats {
+  comments: number
+  events: number
+  replies: number
+  messages: number
+}
+
 interface AutoReplyContext {
   isRunning: boolean
   isListening: ListeningStatus
   replies: ReplyPreview[]
   comments: Message[]
+  stats: AutoReplyStats
 }
+
+const COMMENT_TYPES: ReadonlySet<MessageType> = new Set(['comment', 'wechat_channel_live_msg'])
+/** 是否为观众评论（其余为进房、点赞、下单等互动事件） */
+export const isCommentMessage = (message: Message) => COMMENT_TYPES.has(message.msg_type)
 
 interface AutoReplyState {
   contexts: Record<string, AutoReplyContext>
@@ -51,7 +71,10 @@ interface AutoReplyAction {
   setIsRunning: (accountId: string, isRunning: boolean) => void
   setIsListening: (accountId: string, isListening: ListeningStatus) => void
   addComment: (accountId: string, comment: Message) => void
-  addReply: (accountId: string, commentId: string, nickname: string, content: string) => void
+  addReply: (
+    accountId: string,
+    reply: Pick<ReplyPreview, 'commentId' | 'replyFor' | 'replyContent' | 'source' | 'sent'>,
+  ) => void
   removeReply: (accountId: string, commentId: string) => void
 }
 
@@ -60,7 +83,11 @@ const createDefaultContext = (): AutoReplyContext => ({
   isListening: 'stopped',
   replies: [],
   comments: [],
+  stats: { comments: 0, events: 0, replies: 0, messages: 0 },
 })
+
+/** 取 draft 对应的原数组。直接展开 draft 会给每个元素都创建代理，列表 500 条时每来一条评论都要多做 500 次 */
+const baseOf = <T>(value: T): T => (isDraft(value) ? (original(value as Draft<T>) as T) : value)
 
 export const useAutoReplyStore = create<AutoReplyState & AutoReplyAction>()(
   immer(set => {
@@ -94,21 +121,26 @@ export const useAutoReplyStore = create<AutoReplyState & AutoReplyAction>()(
         set(state => {
           const context = ensureContext(state, accountId)
           // 限制评论数量，防止内存无限增长
-          context.comments = [{ ...comment }, ...context.comments].slice(0, AUTO_REPLY.MAX_COMMENTS)
+          context.comments = [comment, ...baseOf(context.comments)].slice(
+            0,
+            AUTO_REPLY.MAX_COMMENTS,
+          )
+          if (isCommentMessage(comment)) context.stats.comments++
+          else context.stats.events++
         }),
-      addReply: (accountId, commentId, nickname, content) =>
+      addReply: (accountId, reply) =>
         set(state => {
           const context = ensureContext(state, accountId)
           context.replies = [
             {
+              ...reply,
               id: crypto.randomUUID(),
-              commentId,
-              replyContent: content,
-              replyFor: nickname,
               time: new Date().toISOString(),
             },
-            ...context.replies,
+            ...baseOf(context.replies),
           ].slice(0, AUTO_REPLY.MAX_REPLIES)
+          if (reply.source === 'scheduled' || reply.source === 'batch') context.stats.messages++
+          else context.stats.replies++
         }),
       removeReply: (accountId, commentId) =>
         set(state => {
@@ -178,12 +210,13 @@ function generateAIMessages(
   return mergedMessages
 }
 
+/** 发送互动事件的回复，返回实际发送的内容 */
 function sendConfiguredReply(
   accountId: string,
   config: AutoReplyConfig,
   sourceMessage: Message,
   errorHandler: ReturnType<typeof useErrorHandler>['handleError'],
-): void {
+): string | null {
   const replyConfig = config[sourceMessage.msg_type as EventMessageType]
   if (replyConfig.enable && replyConfig.messages.length > 0) {
     const filterMessages = []
@@ -199,9 +232,11 @@ function sendConfiguredReply(
     const content = getRandomElement(replyMessages)
     if (content) {
       const message = replaceUsername(content, sourceMessage.nick_name, config.hideUsername)
-      sendMessage(accountId, message, errorHandler) // 注意：这里是异步的，但我们不等待它完成
+      void sendMessage(accountId, message, errorHandler) // 注意：这里是异步的，但我们不等待它完成
+      return message
     }
   }
+  return null
 }
 
 function getRandomElement<T>(arr: T[]): T | undefined {
@@ -234,16 +269,16 @@ function replaceUsername(content: string, username: string, mask: boolean) {
 
 /**
  * 处理关键字回复逻辑
- * @returns boolean - 是否成功匹配并发送了关键字回复
+ * @returns 匹配成功时返回发送的内容，否则返回 null
  */
 const handleKeywordReply = (
   comment: CommentMessage,
   config: AutoReplyConfig,
   accountId: string,
   errorHandler: ReturnType<typeof useErrorHandler>['handleError'],
-): boolean => {
+): string | null => {
   if (!config.comment.keywordReply.enable || !comment.content) {
-    return false
+    return null
   }
 
   const rule = config.comment.keywordReply.rules.find(({ keywords }) =>
@@ -254,12 +289,11 @@ const handleKeywordReply = (
     const content = getRandomElement(rule.contents)
     if (content) {
       const message = replaceUsername(content, comment.nick_name, config.hideUsername)
-      sendMessage(accountId, message, errorHandler)
-      // 注意：关键字回复不通过 addReply 添加到界面，直接发送
-      return true // 匹配成功
+      void sendMessage(accountId, message, errorHandler)
+      return message
     }
   }
-  return false // 未匹配
+  return null
 }
 
 /**
@@ -329,29 +363,55 @@ const handleAIReply = async (
   }
 }
 
-export function useAutoReply() {
-  const store = useAutoReplyStore()
-  const { currentAccountId } = useAccounts()
+const defaultContext = createDefaultContext()
+
+/**
+ * 按需订阅当前账号的自动回复状态。只在 getter 返回值变化时重新渲染，
+ * 避免每来一条评论就让所有用到自动回复的组件都重新渲染
+ */
+export function useCurrentAutoReply<T>(getter: (context: AutoReplyContext) => T): T {
+  const currentAccountId = useAccounts(state => state.currentAccountId)
+  return useAutoReplyStore(
+    useShallow(state => getter(state.contexts[currentAccountId] ?? defaultContext)),
+  )
+}
+
+/** 绑定到当前账号的操作，不订阅任何列表数据 */
+export function useAutoReplyActions() {
+  const currentAccountId = useAccounts(state => state.currentAccountId)
+  return {
+    setIsRunning: (running: boolean) =>
+      useAutoReplyStore.getState().setIsRunning(currentAccountId, running),
+    setIsListening: (listening: ListeningStatus) =>
+      useAutoReplyStore.getState().setIsListening(currentAccountId, listening),
+  }
+}
+
+/** 收到评论后的处理：记录评论并按配置自动回复。状态都从 getState() 现取，不订阅 store */
+export function useAutoReplyCommentHandler() {
   const accountName = useCurrentLiveControl(ctx => ctx.accountName)
   const aiStore = useAIProvider('autoReply')
   const { config } = useAutoReplyConfig()
   const { handleError } = useErrorHandler()
 
-  const context = useMemo(() => {
-    return store.contexts[currentAccountId] || createDefaultContext()
-  }, [store.contexts, currentAccountId])
-
-  const { isRunning, isListening, comments, replies } = context
-
   const handleComment = useMemoizedFn((comment: Message, accountId: string) => {
-    // const context = contexts[accountId] || createDefaultContext()
-    const currentContext =
-      useAutoReplyStore.getState().contexts[accountId] || createDefaultContext()
+    const store = useAutoReplyStore.getState()
+    const currentContext = store.contexts[accountId] || defaultContext
     const { isRunning, comments: allComments, replies: allReplies } = currentContext
 
     store.addComment(accountId, comment)
     if (!isRunning) {
       return
+    }
+
+    const addReply = (replyContent: string, source: ReplySource, sent: boolean) => {
+      store.addReply(accountId, {
+        commentId: comment.msg_id,
+        replyFor: comment.nick_name,
+        replyContent,
+        source,
+        sent,
+      })
     }
 
     ;(function handleReply() {
@@ -364,14 +424,15 @@ export function useAutoReply() {
         return
       }
       switch (comment.msg_type) {
-        case 'taobao_comment':
-        case 'xiaohongshu_comment':
         case 'wechat_channel_live_msg':
         case 'comment': {
           // 优先尝试关键字回复
-          const keywordReplied = handleKeywordReply(comment, config, currentAccountId, handleError)
+          const keywordReply = handleKeywordReply(comment, config, accountId, handleError)
+          if (keywordReply) {
+            addReply(keywordReply, 'keyword', true)
+          }
           // 如果关键字未回复，且 AI 回复已启用，则尝试 AI 回复
-          if (!keywordReplied && config.comment.aiReply.enable) {
+          if (!keywordReply && config.comment.aiReply.enable) {
             const { provider, model } = aiStore.config
             const apiKey = aiStore.apiKeys[provider]
             const customBaseURL = aiStore.customBaseURL
@@ -388,7 +449,7 @@ export function useAutoReply() {
                 customBaseURL,
               },
               (replyContent: string) => {
-                store.addReply(accountId, comment.msg_id, comment.nick_name, replyContent)
+                addReply(replyContent, 'ai', config.comment.aiReply.autoSend)
               },
               handleError,
             )
@@ -398,12 +459,15 @@ export function useAutoReply() {
         case 'live_order': {
           /* 如果设置了仅已支付回复且当前非已支付时不回复 */
           if (!config.live_order.options?.onlyReplyPaid || comment.order_status === '已付款') {
-            sendConfiguredReply(accountId, config, comment, handleError)
+            const content = sendConfiguredReply(accountId, config, comment, handleError)
+            if (content) addReply(content, 'event', true)
           }
           break
         }
-        default:
-          sendConfiguredReply(accountId, config, comment, handleError)
+        default: {
+          const content = sendConfiguredReply(accountId, config, comment, handleError)
+          if (content) addReply(content, 'event', true)
+        }
       }
     })()
 
@@ -426,18 +490,5 @@ export function useAutoReply() {
     })()
   })
 
-  return {
-    // 当前账户的状态
-    isRunning,
-    isListening,
-    comments, // 当前账户的评论
-    replies, // 当前账户的回复
-
-    // Actions (绑定到当前账户)
-    handleComment,
-    setIsRunning: (running: boolean) => store.setIsRunning(currentAccountId, running),
-    setIsListening: (listening: ListeningStatus) =>
-      store.setIsListening(currentAccountId, listening),
-    removeReply: (commentId: string) => store.removeReply(currentAccountId, commentId),
-  }
+  return handleComment
 }

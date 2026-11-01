@@ -17,7 +17,7 @@ function setupIpcHandlers() {
         const logger = createLogger(`@${accountManager.getAccountName(accountId)}`).scope(TASK_NAME)
         logger.error('启动任务失败：', error)
       }),
-      r => r.then(Result.isSuccess),
+      async r => Result.isSuccess(await r),
     )
   })
 
@@ -47,7 +47,7 @@ function setupIpcHandlers() {
           )
           logger.error('启动任务失败：', error)
         }),
-        r => r.then(Result.isSuccess),
+        async r => Result.isSuccess(await r),
       )
     },
   )

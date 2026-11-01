@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { abilities, listeningSources } from '@/abilities'
+import { SettingRow } from '@/components/common/Layout'
 import {
   Select,
   SelectContent,
@@ -29,7 +30,7 @@ export function ListeningSourceSetting() {
   const { entry: listeningSource } = config
 
   const listeningSourceTips = useMemo(() => {
-    return listeningSources[listeningSource].tips
+    return listeningSources[listeningSource]?.tips
   }, [listeningSource])
 
   const handleSourceChange = (value: ListeningSource) => {
@@ -38,13 +39,12 @@ export function ListeningSourceSetting() {
   }
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">监听来源</h3>
+    <SettingRow label="监听来源" description={listeningSourceTips}>
       <Select
         value={listeningSource}
         onValueChange={value => handleSourceChange(value as ListeningSource)}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-40">
           <SelectValue placeholder="选择监听来源" />
         </SelectTrigger>
         <SelectContent>
@@ -55,7 +55,6 @@ export function ListeningSourceSetting() {
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">{listeningSourceTips}</p>
-    </div>
+    </SettingRow>
   )
 }

@@ -1,6 +1,7 @@
 import { Result } from '@praha/byethrow'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
-import { TaskNotSupportedError } from '#/errors/AppError'
+import { TaskNotSupportedError, UnexpectedError } from '#/errors/AppError'
+import type { PlatformError } from '#/errors/PlatformError'
 import { emitter } from '#/event/eventBus'
 import { createLogger } from '#/logger'
 import {
@@ -10,12 +11,12 @@ import {
 } from '#/managers/BrowserSessionManager'
 import { platformFactory } from '#/platforms'
 import {
+  type IPerformComment,
   type IPlatform,
   isCommentListener,
   isPerformComment,
   isPerformPopup,
   isPinComment,
-  isSendRedPacket,
 } from '#/platforms/IPlatform'
 import { createAutoCommentTask } from '#/tasks/AutoCommentTask'
 import { createAutoPopupTask } from '#/tasks/AutoPopupTask'
@@ -25,8 +26,13 @@ import { createPinCommentTask } from '#/tasks/PinCommentTask'
 import { createSendBatchMessageTask } from '#/tasks/SendBatchMessageTask'
 import windowManager from '#/windowManager'
 
+/** 自动回复在队列里等待超过这个时间就不再发送，避免回复越来越滞后 */
+const AUTO_REPLY_MAX_WAIT_MS = 30_000
+
 export class AccountSession {
   private platform: IPlatform
+  private commentQueue: Promise<unknown> = Promise.resolve()
+  private rawPerformComment: IPerformComment['performComment'] | null = null
   private browserSession: BrowserSession | null = null
   private activeTasks: Map<LiveControlTask['type'], ITask> = new Map()
 
@@ -36,6 +42,59 @@ export class AccountSession {
     private logger = createLogger(`@${account.name}`),
   ) {
     this.platform = new platformFactory[platformName]()
+    this.serializeComments(this.platform)
+  }
+
+  /**
+   * 同一账号的所有评论共用中控台的同一个输入框，
+   * 自动回复、自动发言、一键刷屏同时发送会互相抢占，这里让它们排队逐条执行
+   */
+  private serializeComments(platform: IPlatform) {
+    if (!isPerformComment(platform)) return
+    const perform = platform.performComment.bind(platform)
+    this.rawPerformComment = perform
+    platform.performComment = (message, pinTop) => this.enqueue(() => perform(message, pinTop))
+  }
+
+  private enqueue<T>(job: () => Promise<T>): Promise<T> {
+    const run = this.commentQueue.then(job)
+    // 上一条失败不影响后续排队
+    this.commentQueue = run.catch(() => {})
+    return run
+  }
+
+  /**
+   * 发送一条回复评论，与其他发评论的任务排队执行。
+   * 自动回复排队超时会被丢弃（返回 expired），手动发送不受限制
+   */
+  public async sendComment(
+    message: string,
+    { manual = false } = {},
+  ): Result.ResultAsync<'sent' | 'expired', Error | PlatformError> {
+    const perform = this.rawPerformComment
+    if (!perform) {
+      return Result.fail(
+        new TaskNotSupportedError({
+          taskName: '发送评论',
+          targetName: this.platform.platformName,
+        }),
+      )
+    }
+    const queuedAt = Date.now()
+    return this.enqueue(async () => {
+      if (!manual && Date.now() - queuedAt > AUTO_REPLY_MAX_WAIT_MS) {
+        return Result.succeed('expired' as const)
+      }
+      try {
+        return Result.pipe(
+          await perform(message),
+          Result.map(() => 'sent' as const),
+        )
+      } catch (error) {
+        // 平台操作抛出的异常（如 fill 超时）也转成失败结果，交给调用方记录日志
+        return Result.fail(new UnexpectedError({ description: String(error) }))
+      }
+    })
   }
 
   async connect(config: { headless?: boolean; storageState?: string }) {
@@ -143,13 +202,6 @@ export class AccountSession {
     }
   }
 
-  public async sendRedPacket(duration: string): Result.ResultAsync<void, Error> {
-    if (!isSendRedPacket(this.platform)) {
-      return Result.fail(new TaskNotSupportedError({ taskName: '一键发红包', targetName: this.platform.platformName }))
-    }
-    return this.platform.sendRedPacket(duration)
-  }
-
   public updateTaskConfig<T extends LiveControlTask>(
     type: T['type'],
     config: Partial<T['config']>,
@@ -175,7 +227,7 @@ function makeTask<T extends LiveControlTask>(
     return createAutoCommentTask(platform, task.config, account, logger)
   }
   if (task.type === 'send-batch-messages' && isPerformComment(platform)) {
-    return createSendBatchMessageTask(platform, task.config, logger)
+    return createSendBatchMessageTask(platform, task.config, account, logger)
   }
   if (task.type === 'comment-listener' && isCommentListener(platform)) {
     return createCommentListenerTask(platform, task.config, account, logger)

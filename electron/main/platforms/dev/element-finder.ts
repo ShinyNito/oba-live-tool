@@ -69,6 +69,15 @@ export const devElementFinder: IElementFinder = {
         }),
       )
     }
+    // 测试中控台未开播时输入框禁用，直接报错，避免 fill 卡满超时
+    if (await textarea.isDisabled()) {
+      return Result.fail(
+        new ElementDisabledError({
+          elementName: '评论框（请先在测试中控台点击"开始直播"）',
+          element: await textarea.evaluate(el => el.outerHTML),
+        }),
+      )
+    }
     return Result.succeed(textarea)
   },
   async getClickableSubmitCommentButton(page: Page) {

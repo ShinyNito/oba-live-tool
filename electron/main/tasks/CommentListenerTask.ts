@@ -31,8 +31,6 @@ export function createCommentListenerTask(
       await platform.startCommentListener(broadcastMessage, config.source)
       logger.info('开始监听评论')
     } catch (err) {
-      // 失败了还要告诉渲染层关闭按钮
-      windowManager.send(IPC_CHANNELS.tasks.autoReply.listenerStopped, account.id)
       task.stop(TaskStopReason.ERROR, err)
     }
   }
@@ -83,6 +81,8 @@ export function createCommentListenerTask(
         platform.stopCommentListener()
         wsService?.stop()
         wsService = null
+        // 无论是手动停止、出错还是断开连接，都要让渲染层同步为未监听
+        windowManager.send(IPC_CHANNELS.tasks.autoReply.listenerStopped, account.id)
       },
     },
   )

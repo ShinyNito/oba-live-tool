@@ -1,9 +1,8 @@
-import { PopoverClose } from '@radix-ui/react-popover'
 import pick from 'lodash-es/pick'
-import { FilterIcon, FunnelPlusIcon, PlusIcon, Trash2Icon, X, XIcon } from 'lucide-react'
+import { FilterIcon, FunnelPlusIcon, PlusIcon, Trash2Icon, X } from 'lucide-react'
 import { useState } from 'react'
+import { Hint, SettingRow, Token } from '@/components/common/Layout'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -13,12 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { EventMessageType, MessageOf } from '@/hooks/useAutoReply'
 import { type SimpleEventReplyMessage, useAutoReplyConfig } from '@/hooks/useAutoReplyConfig'
+import { useCurrentLiveControl } from '@/hooks/useLiveControl'
 import { useToast } from '@/hooks/useToast'
+import { cn } from '@/lib/utils'
 import type { StringFilter, StringFilterConfig } from '@/utils/filter'
 
 // 自动回复类型
@@ -59,6 +59,8 @@ export function CompassSetting() {
   const { config, updateEventReplyEnabled, updateEventReplyContents, updateEventReplyOptions } =
     useAutoReplyConfig()
   const { entry: listeningSource } = config
+  const platform = useCurrentLiveControl(context => context.platform)
+  const editable = listeningSource === 'compass' || platform === 'dev'
   const typeReplies = pick(config, [
     'room_enter',
     'room_like',
@@ -87,83 +89,56 @@ export function CompassSetting() {
     updateEventReplyContents(type, newMessages)
   }
   return (
-    <div className="space-y-6">
-      {autoReplyTypes.map(type => (
-        <div key={type.id} className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <h4 className="text-sm font-medium">{type.name}自动回复</h4>
-              <p className="text-xs text-muted-foreground">
-                当用户
-                {type.name}
-                时自动回复
-              </p>
-            </div>
-            <Switch
-              checked={typeReplies[type.id]?.enable || false}
-              onCheckedChange={checked => handleReplyChange(type.id, checked)}
-              disabled={listeningSource !== 'compass'}
-            />
-          </div>
+    <div className="divide-y">
+      {autoReplyTypes.map(type => {
+        const enabled = typeReplies[type.id]?.enable || false
+        return (
+          <div key={type.id} className="space-y-4 py-4 first:pt-0 last:pb-0">
+            <SettingRow label={type.name} description={`观众${type.name}时自动发送一条回复`}>
+              <Switch
+                checked={enabled}
+                onCheckedChange={checked => handleReplyChange(type.id, checked)}
+                disabled={!editable}
+              />
+            </SettingRow>
 
-          {typeReplies[type.id]?.enable && (
-            <Card className="border-dashed">
-              <CardContent className="pt-4">
+            {enabled && (
+              <div className="space-y-4 rounded-lg bg-muted/40 p-3">
                 <ReplyMessageManager
-                  title={`${type.name}回复消息`}
-                  description="系统将从以下消息中随机选择一条发送，可使用{用户名}变量"
-                  messages={typeReplies[type.id]?.messages || [type.default]}
+                  messages={typeReplies[type.id]?.messages ?? []}
                   onAdd={message => handleMessageAdd(type.id, message)}
                   onRemove={index => handleMessageRemove(type.id, index)}
                   placeholder={`例如：${type.default}`}
                   msgType={type.id}
                 />
-                {
-                  // 单独处理已下单、已支付的回复
-                  type.id === 'live_order' && (
-                    <>
-                      <Separator className="mt-4" />
-                      <div className="flex justify-between items-center pt-4 text-sm">
-                        <div className="flex flex-col">
-                          <span>仅在已支付时回复</span>
-                          <span className="text-muted-foreground">
-                            用户订单具有<strong>已下单</strong>和<strong>已支付</strong>
-                            两种状态
-                          </span>
-                        </div>
-                        <Switch
-                          checked={config[type.id]?.options?.onlyReplyPaid}
-                          onCheckedChange={e =>
-                            hanldeOptionsChange(type.id, {
-                              onlyReplyPaid: e,
-                            })
-                          }
-                        />
-                      </div>
-                    </>
-                  )
-                }
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      ))}
+                {type.id === 'live_order' && (
+                  <SettingRow
+                    label="仅在已付款时回复"
+                    description="订单有已下单、已付款两种状态，开启后只回复已付款的订单"
+                  >
+                    <Switch
+                      checked={config[type.id]?.options?.onlyReplyPaid}
+                      onCheckedChange={e => hanldeOptionsChange(type.id, { onlyReplyPaid: e })}
+                    />
+                  </SettingRow>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 // 用于管理回复消息的组件
 function ReplyMessageManager({
-  title,
-  description,
   messages,
   onAdd,
   onRemove,
   placeholder,
   msgType,
 }: {
-  title: string
-  description?: string
   messages: SimpleEventReplyMessage[]
   onAdd: (message: SimpleEventReplyMessage) => void
   onRemove: (index: number) => void
@@ -176,9 +151,8 @@ function ReplyMessageManager({
     content: [],
   })
   const [newMessage, setNewMessage] = useState('')
-  const [filterForm, setFilterForm] = useState<MessageFilterForm<typeof msgType>>(
-    defaultFilterForm(),
-  )
+  const [filterForm, setFilterForm] =
+    useState<MessageFilterForm<typeof msgType>>(defaultFilterForm())
   const { toast } = useToast()
 
   const handleAdd = () => {
@@ -211,47 +185,51 @@ function ReplyMessageManager({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-medium">{title}</h3>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      </div>
-
-      <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
-        {messages.length === 0 ? (
-          <div className="text-sm text-center py-4 text-muted-foreground">暂无消息</div>
-        ) : (
-          messages.map((message, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: 下标无妨
-            <div key={index} className="flex items-center gap-2 group">
-              <div className="flex-1 text-sm p-2 rounded bg-muted/50 flex justify-between">
-                <span>{typeof message === 'string' ? message : message.content}</span>
-                {typeof message !== 'string' && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <FilterIcon className="w-4 h-4 text-gray-600" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <FilterText filterConfig={message.filter} />
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+    <div className="space-y-2">
+      <Hint>
+        从以下回复中随机挑一条发送，可用 <Token>{'{用户名}'}</Token>
+        。带漏斗图标的回复只在满足条件时使用
+      </Hint>
+      {messages.length === 0 && (
+        <p className="rounded-md bg-warning-soft px-2.5 py-1.5 text-xs text-warning-ink">
+          还没有回复内容，添加至少一条后才会自动回复
+        </p>
+      )}
+      {messages.length > 0 && (
+        <ul className="space-y-1">
+          {messages.map((message, index) => (
+            <li
+              // oxlint-disable-next-line react/no-array-index-key -- 下标无妨
+              key={index}
+              className="group flex items-center gap-2 rounded-md border bg-card py-1.5 pr-1 pl-2.5 text-[13px]"
+            >
+              <span className="flex-1 leading-relaxed break-words">
+                {typeof message === 'string' ? message : message.content}
+              </span>
+              {typeof message !== 'string' && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger aria-label="查看过滤条件">
+                      <FilterIcon className="size-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <FilterText filterConfig={message.filter} />
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <button
+                type="button"
+                className="rounded-sm p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100"
                 onClick={() => onRemove(index)}
+                aria-label="删除这条回复"
               >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))
-        )}
-      </div>
-
+                <X className="size-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex items-center gap-2">
         <MessageFilter
           filterForm={filterForm}
@@ -262,9 +240,14 @@ function ReplyMessageManager({
           placeholder={placeholder || '输入回复消息...'}
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
-          className="flex-1"
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleAdd()
+          }}
+          className="flex-1 text-[13px]"
         />
-        <Button onClick={handleAdd}>添加</Button>
+        <Button variant="outline" onClick={handleAdd}>
+          添加
+        </Button>
       </div>
     </div>
   )
@@ -323,12 +306,12 @@ function FilterText({ filterConfig }: { filterConfig: StringFilterConfig }) {
     }
 
     return lines.map(({ prefix, suffix, conditionText, value, label }, i) => (
-      // biome-ignore lint/suspicious/noArrayIndexKey: 用下标问题不大
+      // oxlint-disable-next-line react/no-array-index-key -- 用下标问题不大
       <div key={i}>
         <span>{prefix}</span>
-        <span className="px-1 text-amber-200">{label}</span>
-        <span className="text-fuchsia-100">{conditionText}</span>
-        <span className="px-1 text-emerald-200">{value}</span>
+        <span className="px-1 font-medium">{label}</span>
+        <span className="opacity-70">{conditionText}</span>
+        <span className="px-1 font-medium">「{value}」</span>
         <span>{suffix}</span>
       </div>
     ))
@@ -401,75 +384,83 @@ function MessageFilter<T extends EventMessageType>({
     })
   }
 
+  const activeCount = filterForm.content.filter(Boolean).length
+
   return (
-    <Popover open={open}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="w-4" onClick={() => setOpen(prev => !prev)}>
-          <FunnelPlusIcon className="w-4 h-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn('relative', activeCount > 0 && 'border-foreground/40')}
+          aria-label="设置过滤条件"
+        >
+          <FunnelPlusIcon />
+          {activeCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground tabular-nums">
+              {activeCount}
+            </span>
+          )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent>
-        <div className="">
-          <div className="text-sm">过滤器</div>
-          <p className="text-sm text-muted-foreground">仅回复过滤器命中的条件</p>
+      <PopoverContent align="start" className="w-80 space-y-3">
+        <div className="space-y-0.5">
+          <p className="text-[13px] font-medium">过滤条件</p>
+          <Hint>只在满足任一条件时使用这条回复，不填则总是可用</Hint>
         </div>
-        <div className="grid grid-cols-4 gap-x-1 pt-2">
-          <div className="col-span-4 flex flex-col space-y-2">
-            <div className="flex space-x-1">
-              <Select value={filterForm.field as string} onValueChange={handleFilterFieldChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择字段" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentFieldMapping.map(([value, text]) => {
-                    return (
-                      <SelectItem value={value} key={value}>
-                        {text}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-              <Select value={filterForm.type as string} onValueChange={handleFilterTypeChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择条件" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(conditionTextMap).map(([value, text]) => {
-                    return (
-                      <SelectItem value={value} key={value}>
-                        {text}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            {filterForm.content.map((v, i) => (
-              <div
-                className="flex space-x-1"
-                // biome-ignore lint/suspicious/noArrayIndexKey: 数量少，key 用 index 不要紧的
-                key={i}
-              >
-                <Input
-                  placeholder="填写条件"
-                  value={v}
-                  onChange={e => handleFilterContentChange(e.target.value, i)}
-                />
-                <Button variant="ghost" onClick={() => handleFilterContentRemove(i)}>
-                  <Trash2Icon className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-            <Button variant="ghost" onClick={handleFilterContentAdd}>
-              <PlusIcon className="w-4 h-4" />
+        <div className="flex gap-2">
+          <Select value={filterForm.field as string} onValueChange={handleFilterFieldChange}>
+            <SelectTrigger size="sm" className="flex-1">
+              <SelectValue placeholder="选择字段" />
+            </SelectTrigger>
+            <SelectContent>
+              {currentFieldMapping.map(([value, text]) => (
+                <SelectItem value={value} key={value}>
+                  {text}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterForm.type as string} onValueChange={handleFilterTypeChange}>
+            <SelectTrigger size="sm" className="flex-1">
+              <SelectValue placeholder="选择条件" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(conditionTextMap).map(([value, text]) => (
+                <SelectItem value={value} key={value}>
+                  {text}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {filterForm.content.map((v, i) => (
+          <div
+            className="flex gap-1"
+            // oxlint-disable-next-line react/no-array-index-key -- 数量少，key 用 index 不要紧的
+            key={i}
+          >
+            <Input
+              placeholder="填写匹配内容"
+              value={v}
+              className="h-8 text-[13px]"
+              onChange={e => handleFilterContentChange(e.target.value, i)}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              onClick={() => handleFilterContentRemove(i)}
+              aria-label="删除条件"
+            >
+              <Trash2Icon />
             </Button>
           </div>
-        </div>
-
-        <PopoverClose className="absolute top-3 right-3">
-          <XIcon className="w-4 h-4" onClick={() => setOpen(false)} />
-        </PopoverClose>
+        ))}
+        <Button variant="ghost" size="sm" className="w-full" onClick={handleFilterContentAdd}>
+          <PlusIcon />
+          添加匹配内容
+        </Button>
       </PopoverContent>
     </Popover>
   )

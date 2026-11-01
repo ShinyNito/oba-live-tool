@@ -151,13 +151,22 @@
                         </div>
                         
                         <div ref="chatContainer" class="chat-list flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
-                            <div v-for="msg in chatList" :key="msg.id" class="chat-item flex items-start gap-2 animate-fade-in">
+                            <div v-for="msg in chatList" :key="msg.id"
+                                 class="chat-item flex items-start gap-2 animate-fade-in"
+                                 :data-id="msg.id" :data-type="msg.type" :data-event="msg.event || ''"
+                                 :data-user="msg.username" :data-content="msg.content"
+                                 :data-product="msg.product || ''" :data-status="msg.status || ''">
+                                <div v-if="msg.type === 'event'" class="w-full text-center text-xs text-gray-400">
+                                    {{ msg.username }} {{ msg.content }}
+                                </div>
+                                <template v-else>
                                 <span class="text-xs text-gray-400 pt-1 w-12 text-right truncate">{{ msg.username }}</span>
                                 <div class="text-sm px-3 py-1.5 rounded bg-white shadow-sm text-gray-700 max-w-[80%] break-words"
                                      :class="{'!bg-indigo-100 !text-indigo-900 border border-indigo-200': msg.type === 'host', '!bg-orange-50 !text-orange-800 border border-orange-100': msg.type === 'system'}">
                                     <span v-if="msg.type === 'host'" class="font-bold text-indigo-600 text-xs mr-1">[主播]</span>
                                     {{ msg.content }}
                                 </div>
+                                </template>
                             </div>
                         </div>
 
@@ -359,8 +368,11 @@
 
                 const chatList = ref([{ id: 1, username: '系统', content: '中控台已就绪，请点击上方按钮开始直播。', type: 'system' }]);
                 
-                const addMessage = (user, text, type = 'user') => {
-                    chatList.value.push({ id: Date.now(), username: user, content: text, type });
+                let messageSeq = 1;
+                const addMessage = (user, text, type = 'user', extra = {}) => {
+                    chatList.value.push({ id: ++messageSeq, username: user, content: text, type, ...extra });
+                    // 只保留最近 200 条，长时间测试时页面和弹幕轮询都不会越来越慢
+                    if (chatList.value.length > 200) chatList.value.splice(0, chatList.value.length - 200);
                     nextTick(() => {
                         if(chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
                     });
@@ -391,14 +403,33 @@
                 let timer;
                 const startFakeInteraction = () => {
                     if (timer) clearInterval(timer);
+                    const users = ['User_A', '西瓜', '橙子', '138****1234', '想买', '小白', '铁粉'];
+                    const msgs = ['抢到了', '什么时候发货', '好便宜', '质量咋样', '主播好漂亮', '上连接', '666'];
+                    const events = [
+                        ['room_enter', '进入直播间'],
+                        ['room_like', '点赞了直播间'],
+                        ['room_follow', '关注了直播间'],
+                        ['ecom_fansclub_participate', '加入了粉丝团'],
+                        ['subscribe_merchant_brand_vip', '加入了品牌会员'],
+                        ['live_order', '下单了'],
+                    ];
+                    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
                     timer = setInterval(() => {
-                        if(Math.random() > 0.7) {
-                            const users = ['User_A', '西瓜', '橙子', '138****1234', '想买', '小白', '铁粉'];
-                            const msgs = ['抢到了', '什么时候发货', '好便宜', '质量咋样', '主播好漂亮', '上连接', '666'];
-                            addMessage(users[Math.floor(Math.random()*users.length)], msgs[Math.floor(Math.random()*msgs.length)]);
-                            // 随机波动人数
-                            onlineCount.value += Math.floor(Math.random() * 10) - 3;
+                        const user = pick(users);
+                        if (Math.random() < 0.5) {
+                            addMessage(user, pick(msgs));
+                        } else {
+                            const [event, text] = pick(events);
+                            if (event === 'live_order') {
+                                const product = pick(products.value)?.name ?? '商品';
+                                const status = pick(['已下单', '已付款']);
+                                addMessage(user, `${text} ${product}（${status}）`, 'event', { event, product, status });
+                            } else {
+                                addMessage(user, text, 'event', { event });
+                            }
                         }
+                        // 随机波动人数
+                        onlineCount.value += Math.floor(Math.random() * 10) - 3;
                     }, 1500);
                 };
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
@@ -161,11 +162,13 @@ export const useAutoReplyConfigStore = create<AutoReplyConfigStore>()(
 )
 
 export const useAutoReplyConfig = () => {
-  const store = useAutoReplyConfigStore()
+  const store = useAutoReplyConfigStore.getState()
   const currentAccountId = useAccounts(ctx => ctx.currentAccountId)
-  const config = mergeWithoutArray(
-    createDefaultConfig(),
-    store.contexts[currentAccountId]?.config ?? {},
+  // 只订阅当前账号的配置；深合并默认值有开销，配置没变就复用上次的结果
+  const savedConfig = useAutoReplyConfigStore(state => state.contexts[currentAccountId]?.config)
+  const config = useMemo(
+    () => mergeWithoutArray(createDefaultConfig(), savedConfig ?? {}),
+    [savedConfig],
   )
 
   return {
