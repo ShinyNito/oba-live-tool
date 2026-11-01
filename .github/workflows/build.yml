@@ -1,6 +1,8 @@
 name: Build
 
 on:
+  # 在 Actions 页面手动运行，不用推送代码也能打包
+  workflow_dispatch:
   push:
     branches: [main]
     paths-ignore:
