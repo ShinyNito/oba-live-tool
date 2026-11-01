@@ -19,7 +19,7 @@ export const createPinCommentTask = (
   _logger: ScopedLogger,
 ): Result.Result<PinCommentTask, Error> => {
   if (runningTasks.has(accountId)) {
-    // biome-ignore lint/style/noNonNullAssertion: 用 has 判断过了
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- 用 has 判断过了
     const task = runningTasks.get(accountId)!
     task.setComment(_comment)
     return Result.succeed(task)

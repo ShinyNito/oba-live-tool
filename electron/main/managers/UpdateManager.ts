@@ -395,7 +395,7 @@ class MacOSUpdater implements Updater {
           return
         }
       }
-      // biome-ignore lint/style/noNonNullAssertion: 确保 assetsURL 不为 null
+      // oxlint-disable-next-line typescript/no-non-null-assertion -- 确保 assetsURL 不为 null
       fileUrl = `${this.safeSource}${new URL(setupFile.url, this.assetsURL!)}`
       const resp = await net.fetch(fileUrl)
       if (!resp.ok) {

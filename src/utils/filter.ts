@@ -30,7 +30,7 @@ export function matchString(value: string, condition: StringFilter): boolean {
 }
 
 export function matchObject(
-  // biome-ignore lint/suspicious/noExplicitAny: 不用 any 我用什么啊
+  // oxlint-disable-next-line typescript/no-explicit-any -- 不用 any 我用什么啊
   obj: Record<string, any>,
   config: StringFilterConfig,
 ): boolean {

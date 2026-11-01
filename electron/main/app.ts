@@ -5,12 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { IPC_CHANNELS } from 'shared/ipcChannels'
 import { emitter } from './event/eventBus'
-import { updateManager } from './managers/UpdateManager'
-import { providerService } from './services/ProviderService'
-import windowManager from './windowManager'
-import './ipc'
 import { createLogger } from './logger'
 import { accountManager } from './managers/AccountManager'
+import { updateManager } from './managers/UpdateManager'
+import './ipc'
+import { providerService } from './services/ProviderService'
+import windowManager from './windowManager'
 
 // const _require = createRequire(import.meta.url)
 

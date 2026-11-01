@@ -1,4 +1,4 @@
-// biome-ignore lint/suspicious/noExplicitAny: 暂时忽略
+// oxlint-disable-next-line typescript/no-explicit-any -- 暂时忽略
 type EventCallback = (...args: any[]) => void
 
 class EventEmitter {
@@ -45,7 +45,7 @@ class EventEmitter {
    * @param args 传递给回调函数的参数
    */
 
-  // biome-ignore lint/suspicious/noExplicitAny: 暂时忽略
+  // oxlint-disable-next-line typescript/no-explicit-any -- 暂时忽略
   emit(event: string, ...args: any[]) {
     const callbacks = this.events.get(event)
     if (callbacks) {

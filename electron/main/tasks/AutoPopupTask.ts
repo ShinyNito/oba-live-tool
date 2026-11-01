@@ -19,7 +19,9 @@ const retryOptions = {
  * 将 goodsItems 展开为执行序列：每个 item 按 repeatCount 展开
  * 返回 { id, interval } 数组
  */
-function buildExecutionQueue(config: AutoPopupConfig): { id: number; interval: [number, number] }[] {
+function buildExecutionQueue(
+  config: AutoPopupConfig,
+): { id: number; interval: [number, number] }[] {
   const globalInterval = config.scheduler.interval
   const items = config.goodsItems
   if (!items || items.length === 0) {
@@ -29,9 +31,10 @@ function buildExecutionQueue(config: AutoPopupConfig): { id: number; interval: [
   const queue: { id: number; interval: [number, number] }[] = []
   for (const item of items) {
     const count = Math.max(1, Math.min(item.repeatCount ?? 1, 10000))
-    const interval = item.itemInterval && item.itemInterval[0] > 0 && item.itemInterval[1] > 0
-      ? item.itemInterval
-      : globalInterval
+    const interval =
+      item.itemInterval && item.itemInterval[0] > 0 && item.itemInterval[1] > 0
+        ? item.itemInterval
+        : globalInterval
     for (let i = 0; i < count; i++) {
       queue.push({ id: item.id, interval })
     }

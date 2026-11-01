@@ -123,7 +123,7 @@ function useLoading() {
 
 // ----------------------------------------------------------------------
 
-// biome-ignore lint/correctness/useHookAtTopLevel: 这不是 hook
+// oxlint-disable-next-line react-hooks/rules-of-hooks -- 这不是 hook
 const { appendLoading, removeLoading } = useLoading()
 domReady().then(appendLoading)
 

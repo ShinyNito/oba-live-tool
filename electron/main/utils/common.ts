@@ -1,7 +1,7 @@
 import { Result } from '@praha/byethrow'
-import { AbortError } from '#/errors/AppError'
-import 'dotenv/config'
 import { mergeWith } from 'lodash-es'
+import 'dotenv/config'
+import { AbortError } from '#/errors/AppError'
 
 export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min

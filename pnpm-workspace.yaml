@@ -1,0 +1,22 @@
+# For electron-builder
+# https://github.com/electron-userland/electron-builder/issues/6289#issuecomment-1042620422
+shamefullyHoist: true
+
+allowBuilds:
+  electron: true
+  esbuild: true
+  # Only used by the Squirrel.Windows target; we build NSIS
+  electron-winstaller: false
+
+minimumReleaseAgeExclude:
+  - vite-plugin-electron@1.2.0
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.4.0
+  vite-plus: 1.4.0
+overrides:
+  vite@*: 'catalog:'
+peerDependencyRules:
+  allowAny:
+    - vite
+  allowedVersions:
+    vite: '*'
