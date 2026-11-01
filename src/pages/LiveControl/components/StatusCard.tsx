@@ -62,6 +62,7 @@ const ConnectToLiveControl = React.memo(() => {
   const platform = useCurrentLiveControl(context => context.platform)
   const isConnected = useCurrentLiveControl(context => context.isConnected)
   const chromePath = useCurrentChromeConfig(context => context.path)
+  const edgeFirst = useCurrentChromeConfig(context => context.edgeFirst ?? false)
   const storageState = useCurrentChromeConfig(context => context.storageState)
   const headless = useCurrentChromeConfig(context => context.headless)
   const account = useAccounts(store => store.getCurrentAccount())
@@ -78,6 +79,7 @@ const ConnectToLiveControl = React.memo(() => {
       const result = await window.ipcRenderer.invoke(IPC_CHANNELS.tasks.liveControl.connect, {
         headless,
         chromePath,
+        edgeFirst,
         storageState,
         platform,
         account,

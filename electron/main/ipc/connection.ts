@@ -9,11 +9,10 @@ const TASK_NAME = '中控台'
 function setupIpcHandlers() {
   typedIpcMainHandle(
     IPC_CHANNELS.tasks.liveControl.connect,
-    async (_, { chromePath, headless, storageState, platform, account }) => {
+    async (_, { chromePath, edgeFirst, headless, storageState, platform, account }) => {
       try {
-        if (chromePath) {
-          browserManager.setChromePath(chromePath)
-        }
+        // 每次连接都同步设置：清空路径或切换"优先 Edge"后，下次连接立即生效
+        browserManager.setBrowserPreference({ path: chromePath, edgeFirst })
         const accountSession = accountManager.createSession(platform, account)
         await accountSession.connect({
           headless,

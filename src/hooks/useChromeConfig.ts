@@ -23,6 +23,8 @@ interface ChromeConfig {
   path: string
   storageState: string
   headless: boolean
+  /** 没填路径时自动查找，先找 Edge 再找 Chrome。旧数据没有这个字段，按 false 处理 */
+  edgeFirst?: boolean
 }
 
 interface ChromeConfigStore {
@@ -30,6 +32,7 @@ interface ChromeConfigStore {
   setPath: (accountId: string, path: string) => void
   setStorageState: (accountId: string, storageState: string) => void
   setHeadless: (accountId: string, headless: boolean) => void
+  setEdgeFirst: (accountId: string, edgeFirst: boolean) => void
 }
 
 const defaultContext = (): ChromeConfig => ({
@@ -73,6 +76,12 @@ export const useChromeConfigStore = create<ChromeConfigStore>()(
           set(state => {
             const context = ensureContext(state, accountId)
             context.headless = headless
+          })
+        },
+        setEdgeFirst: (accountId, edgeFirst) => {
+          set(state => {
+            const context = ensureContext(state, accountId)
+            context.edgeFirst = edgeFirst
           })
         },
       }
@@ -136,6 +145,7 @@ export function useCurrentChromeConfigActions() {
   const setPath = useChromeConfigStore(state => state.setPath)
   const setStorageState = useChromeConfigStore(state => state.setStorageState)
   const setHeadless = useChromeConfigStore(state => state.setHeadless)
+  const setEdgeFirst = useChromeConfigStore(state => state.setEdgeFirst)
   const currentAccountId = useAccounts(state => state.currentAccountId)
 
   return useMemo(
@@ -143,7 +153,8 @@ export function useCurrentChromeConfigActions() {
       setPath: (path: string) => setPath(currentAccountId, path),
       setStorageState: (storageState: string) => setStorageState(currentAccountId, storageState),
       setHeadless: (headless: boolean) => setHeadless(currentAccountId, headless),
+      setEdgeFirst: (edgeFirst: boolean) => setEdgeFirst(currentAccountId, edgeFirst),
     }),
-    [currentAccountId, setPath, setStorageState, setHeadless],
+    [currentAccountId, setPath, setStorageState, setHeadless, setEdgeFirst],
   )
 }

@@ -6,6 +6,8 @@ export interface IpcChannels {
   // LiveControl
   [IPC_CHANNELS.tasks.liveControl.connect]: (params: {
     chromePath?: string
+    /** 没填 chromePath 时自动查找的顺序 */
+    edgeFirst?: boolean
     headless?: boolean
     storageState?: string
     platform: LiveControlPlatform

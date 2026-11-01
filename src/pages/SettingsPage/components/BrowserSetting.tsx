@@ -19,11 +19,13 @@ import { Switch } from '@/components/ui/switch'
 import { useCurrentChromeConfig, useCurrentChromeConfigActions } from '@/hooks/useChromeConfig'
 import { useToast } from '@/hooks/useToast'
 
+const NOT_FOUND_TIP = '未找到 Chrome 或 Edge，请手动选择。如果装在非默认位置，先打开浏览器再检测'
+
 export function BrowserSetting() {
   const path = useCurrentChromeConfig(context => context.path)
-  const { setPath, setStorageState } = useCurrentChromeConfigActions()
+  const edgeFirst = useCurrentChromeConfig(context => context.edgeFirst ?? false)
+  const { setPath, setStorageState, setEdgeFirst } = useCurrentChromeConfigActions()
   const [isDetecting, setIsDetecting] = useState(false)
-  const [edgeFirst, setEdgeFirst] = useState(false)
   const { toast } = useToast()
 
   const handleCookiesReset = () => {
@@ -53,10 +55,10 @@ export function BrowserSetting() {
 
         toast.success('已自动检测到路径')
       } else {
-        toast.error('未检测到 Chrome，请确保 Chrome 已打开')
+        toast.error(NOT_FOUND_TIP)
       }
     } catch {
-      toast.error('检测 Chrome 路径失败')
+      toast.error(NOT_FOUND_TIP)
     } finally {
       setIsDetecting(false)
     }
@@ -92,7 +94,11 @@ export function BrowserSetting() {
           </Button>
         </div>
       </Field>
-      <SettingRow label="自动检测时优先 Edge" htmlFor={edgeFirstId}>
+      <SettingRow
+        label="优先使用 Edge"
+        description="没填路径时，连接和自动检测都先找 Edge，找不到再找 Chrome"
+        htmlFor={edgeFirstId}
+      >
         <Switch id={edgeFirstId} checked={edgeFirst} onCheckedChange={setEdgeFirst} />
       </SettingRow>
       <Divider />

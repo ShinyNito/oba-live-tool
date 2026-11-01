@@ -19,21 +19,29 @@ export type StorageState = playwright.BrowserContextOptions['storageState']
 chromium.use(stealth())
 
 class BrowserSessionManager {
-  private chromePath: string | null = null
+  /** 设置里手动填的路径，优先使用 */
+  private manualPath: string | null = null
+  private edgeFirst = false
+  /** 自动查找的结果，按查找顺序分别缓存，避免每次连接都重新扫描 */
+  private detectedPaths = new Map<boolean, string>()
 
-  public setChromePath(path: string) {
-    this.chromePath = path
+  public setBrowserPreference({ path, edgeFirst }: { path?: string; edgeFirst?: boolean }) {
+    this.manualPath = path || null
+    this.edgeFirst = edgeFirst ?? false
   }
 
-  private async getChromePathOrDefault() {
-    if (!this.chromePath) {
-      this.chromePath = await findChromium()
+  private async resolveChromePath() {
+    if (this.manualPath) return this.manualPath
+    let path = this.detectedPaths.get(this.edgeFirst)
+    if (!path) {
+      path = await findChromium(this.edgeFirst)
+      this.detectedPaths.set(this.edgeFirst, path)
     }
-    return this.chromePath
+    return path
   }
 
   private async createBrowser(headless = true) {
-    const path = await this.getChromePathOrDefault()
+    const path = await this.resolveChromePath()
     return chromium.launch({
       headless,
       executablePath: path,
